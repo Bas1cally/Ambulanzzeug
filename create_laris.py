@@ -914,9 +914,8 @@ for bereich in BEREICHE:
         set_cell(ws, 4, col_idx, header_text,
                  font=HEADER_FONT, fill=HEADER_BG, alignment=center_wrap, border=thin_border)
 
-    # ── Data Validations ─────────────────────────────────────────────────────
-    names_str = ",".join(sorted(set(NAMES)))
-    dv_names = DataValidation(type="list", formula1=f'"{names_str}"', allow_blank=True)
+    # ── Data Validations (reference named ranges in Hilfslisten) ─────────────
+    dv_names = DataValidation(type="list", formula1="=NamenListe", allow_blank=True)
     dv_names.error = "Bitte einen Namen aus der Liste wählen"
     dv_names.errorTitle = "Ungültiger Name"
     dv_names.prompt = "Name auswählen"
@@ -926,7 +925,7 @@ for bereich in BEREICHE:
     dv_names.add(f"F5:F{MAX_DATA_ROW}")
     dv_names.add(f"I5:I{MAX_DATA_ROW}")
 
-    dv_kat = DataValidation(type="list", formula1='"A,B,C,D"', allow_blank=True)
+    dv_kat = DataValidation(type="list", formula1="=KatListe", allow_blank=True)
     dv_kat.error = "Bitte A, B, C oder D wählen"
     dv_kat.errorTitle = "Ungültige Kategorie"
     dv_kat.prompt = "Kategorie wählen (A-D)"
@@ -934,26 +933,13 @@ for bereich in BEREICHE:
     ws.add_data_validation(dv_kat)
     dv_kat.add(f"J5:J{MAX_DATA_ROW}")
 
-    reko_str = ",".join(REKO_OPTIONS)
-    dv_reko = DataValidation(type="list", formula1=f'"{reko_str}"', allow_blank=True)
+    dv_reko = DataValidation(type="list", formula1="=REKOListe", allow_blank=True)
     dv_reko.error = "Bitte aus der Liste wählen"
     dv_reko.errorTitle = "Ungültige Auswahl"
     dv_reko.prompt = "Besprechungsart wählen"
     dv_reko.promptTitle = "REKO / Besprochen"
     ws.add_data_validation(dv_reko)
     dv_reko.add(f"L5:L{MAX_DATA_ROW}")
-
-    # Date validation for date columns (B, E, H)
-    dv_date = DataValidation(type="date", operator="greaterThan",
-                             formula1="2024-01-01", allow_blank=True)
-    dv_date.error = "Bitte ein gültiges Datum eingeben (TT.MM.JJJJ oder TT.MM.JJJJ HH:MM)"
-    dv_date.errorTitle = "Ungültiges Datum"
-    dv_date.prompt = "Datum eingeben: TT.MM.JJJJ"
-    dv_date.promptTitle = "Datum"
-    ws.add_data_validation(dv_date)
-    dv_date.add(f"B5:B{MAX_DATA_ROW}")
-    dv_date.add(f"E5:E{MAX_DATA_ROW}")
-    dv_date.add(f"H5:H{MAX_DATA_ROW}")
 
     # ── Existing Data ────────────────────────────────────────────────────────
     for row_idx, entry in enumerate(bereich["data"]):
@@ -1100,6 +1086,45 @@ for i, (name, email, role, note) in enumerate(contacts):
     set_cell(ws_hilf, r, 4, note, font=NORMAL_FONT, fill=alt_fill, border=thin_border)
 
 ws_hilf.freeze_panes = "A3"
+
+# ── Dropdown-Listen (Spalte F: Namen, Spalte H: REKO) ────────────────────────
+# These are used as data validation sources via cell references (avoids 255 char limit)
+list_start_row = 22
+
+set_cell(ws_hilf, list_start_row, 6, "Dropdown: Namen", font=BOLD_FONT)
+sorted_names = sorted(set(NAMES))
+for i, name in enumerate(sorted_names):
+    set_cell(ws_hilf, list_start_row + 1 + i, 6, name, font=NORMAL_FONT)
+NAMES_LAST_ROW = list_start_row + len(sorted_names)
+
+set_cell(ws_hilf, list_start_row, 8, "Dropdown: REKO", font=BOLD_FONT)
+for i, opt in enumerate(REKO_OPTIONS):
+    set_cell(ws_hilf, list_start_row + 1 + i, 8, opt, font=NORMAL_FONT)
+REKO_LAST_ROW = list_start_row + len(REKO_OPTIONS)
+
+set_cell(ws_hilf, list_start_row, 10, "Dropdown: Kategorie", font=BOLD_FONT)
+for i, kat in enumerate(["A", "B", "C", "D"]):
+    set_cell(ws_hilf, list_start_row + 1 + i, 10, kat, font=NORMAL_FONT)
+KAT_LAST_ROW = list_start_row + 4
+
+ws_hilf.column_dimensions["F"].width = 22
+ws_hilf.column_dimensions["H"].width = 30
+ws_hilf.column_dimensions["J"].width = 18
+
+# Store references for use in data validation (defined names)
+from openpyxl.workbook.defined_name import DefinedName
+
+# Named ranges for data validation
+namen_ref = f"Hilfslisten!$F${list_start_row+1}:$F${NAMES_LAST_ROW}"
+reko_ref = f"Hilfslisten!$H${list_start_row+1}:$H${REKO_LAST_ROW}"
+kat_ref = f"Hilfslisten!$J${list_start_row+1}:$J${KAT_LAST_ROW}"
+
+dn_namen = DefinedName("NamenListe", attr_text=namen_ref)
+dn_reko = DefinedName("REKOListe", attr_text=reko_ref)
+dn_kat = DefinedName("KatListe", attr_text=kat_ref)
+wb.defined_names.add(dn_namen)
+wb.defined_names.add(dn_reko)
+wb.defined_names.add(dn_kat)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
