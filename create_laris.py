@@ -11,6 +11,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.datavalidation import DataValidation
 from copy import copy
 import datetime
+import urllib.parse
 
 wb = openpyxl.Workbook()
 
@@ -517,9 +518,10 @@ set_cell(ws_info, row, 2, "Erstellen einer Meldung", font=INFO_TITLE_FONT)
 
 instructions_create = [
     'Unten den entsprechenden Reiter für den Bereich auswählen',
-    'Im Feld "Meldung durch" den eigenen Namen auswählen',
+    'Im Feld "Meldung durch" den eigenen Namen auswählen (Dropdown)',
     'Datum im Feld "Meldung am" eintragen (Format: TT.MM.JJJJ)',
     'Info bei "Thema" eintragen',
+    'Auf den grünen "Mail an Bereichsleiter"-Link klicken (öffnet Outlook automatisch)',
     'Speichern',
 ]
 for i, txt in enumerate(instructions_create):
@@ -557,6 +559,7 @@ hints = [
     "Dropdown-Listen für Namen und Kategorien (Klick auf die Zelle)",
     "Datumsfelder manuell ausfüllen (Format: TT.MM.JJJJ HH:MM)",
     "Meldungs- und Erledigungszähler werden automatisch berechnet (Formeln)",
+    "Mail-Versand per klickbarem Link (öffnet Outlook mit Empfänger + Betreff + BCC)",
 ]
 for i, txt in enumerate(hints):
     r = row + 1 + i
@@ -639,11 +642,41 @@ for bereich in BEREICHE:
     ws["F2"] = '=B2-D2'
 
     # Kategorie legend
-    ws.merge_cells("H2:L3")
+    ws.merge_cells("H2:L2")
     set_cell(ws, 2, 8, KATEGORIE_LEGEND,
              font=Font(name="Calibri", size=9, color="666666"),
              alignment=Alignment(wrap_text=True, vertical="top"),
              fill=PatternFill(start_color="F0F0F0", end_color="F0F0F0", fill_type="solid"))
+    ws.row_dimensions[2].height = 55
+
+    # ── Row 3: Mail-Link an Bereichsleiter ──────────────────────────────────
+    ws.row_dimensions[3].height = 30
+    leiter_email = bereich["leiter_email"]
+    leiter_name = bereich["leiter"]
+    bereich_name = bereich["name"]
+    bcc_email = "walter.putschler@mercedes-benz.com"
+
+    # Build mailto URL with subject, bcc
+    subject = urllib.parse.quote(f"LARIS Meldung - {bereich_name}")
+    body = urllib.parse.quote(f"Neue LARIS-Meldung im Bereich: {bereich_name}\n\nBitte in LARIS prüfen und bearbeiten.\n\nMit freundlichen Grüßen")
+    mailto_url = f"mailto:{leiter_email}?subject={subject}&bcc={bcc_email}&body={body}"
+
+    # Merge cells for the mail link area
+    ws.merge_cells("A3:G3")
+    mail_cell = set_cell(ws, 3, 1,
+        f"✉ Mail an Bereichsleiter: {leiter_name} ({leiter_email})",
+        font=Font(name="Calibri", size=11, bold=True, color="FFFFFF", underline="single"),
+        fill=PatternFill(start_color="28A745", end_color="28A745", fill_type="solid"),
+        alignment=Alignment(horizontal="center", vertical="center"))
+    mail_cell.hyperlink = mailto_url
+
+    # Additional hint
+    ws.merge_cells("H3:L3")
+    set_cell(ws, 3, 8,
+        f"BCC an: Putschler ({bcc_email})",
+        font=Font(name="Calibri", size=9, italic=True, color="666666"),
+        fill=PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid"),
+        alignment=Alignment(horizontal="center", vertical="center"))
 
     # ── Row 4: Headers ───────────────────────────────────────────────────────
     ws.row_dimensions[4].height = 32
