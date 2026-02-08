@@ -47,7 +47,7 @@ NAMES = [
     "Dr.Frei", "Dr.Schmidt", "Dr. Vitez", "Breig", "Krempl",
     "Siebert", "Putschler", "Jochim", "Zuber", "Göpfrich",
     "Zeller", "Schmidt", "Zieger-Buchta", "Müller-Horn",
-    "Radimersky", "Wunsch", "Goepfrich"
+    "Radimersky", "Wunsch",
 ]
 
 REKO_OPTIONS = [
@@ -63,6 +63,8 @@ REKO_OPTIONS = [
     "Besprochen mit  Jochim",
     "Besprochen mit  Zuber",
     "Besprochen mit  Göpfrich",
+    "Besprochen mit  Jochim",
+    "Besprochen mit  Wunsch",
     "Besprochen mit  Zeller",
     "Besprochen mit  Schmidt",
     "Besprochen mit  Zieger-Buchta",
@@ -73,356 +75,15 @@ REKO_OPTIONS = [
 
 # ── Bereiche with leaders and existing data ──────────────────────────────────
 BEREICHE = [
-    {
-        "name": "Sekretariat",
-        "leiter": "Emily Schmidt",
-        "leiter_email": "emily_kim.schmidt@mercedes-benz.com",
-        "stellvertreter": "Larissa Radimersky",
-        "data": []
-    },
-    {
-        "name": "EDV",
-        "leiter": "Siebert",
-        "leiter_email": "emanuel.siebert@mercedes-benz.com",
-        "stellvertreter": "",
-        "data": [
-            {
-                "meldung_am": datetime.datetime(2025, 8, 14, 15, 52, 22),
-                "meldung_durch": "Dr.Frei",
-                "thema": "Laris geht nicht richtig und Meldeliste muss aktualisiert werden und Mailbutton geht nicht und es zeigt die Meldung der Active-X Inhalt ist blockiert",
-                "kenntnisnahme_am": datetime.datetime(2025, 8, 15, 10, 53, 31),
-                "kenntnisnahme_durch": "Zuber",
-                "massnahme": "Laris war nie kaputt, die Excel Anwendung muss für die Benutzung eingestellt werden im Bereich Active-X Inhalte",
-                "erledigt_am": datetime.datetime(2025, 8, 15, 10, 53, 43),
-                "erledigt_durch": "Zuber",
-                "kategorie": "C",
-                "info": "",
-                "reko": "Nicht erforderlich"
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 9, 26, 8, 26, 9),
-                "meldung_durch": "Dr.Frei",
-                "thema": "Das Blatt Organisation Ambulanz in Laris hat einen Schreibschutz, so dass nichts eingetragen werden kann - bitte diesen entfernen",
-                "kenntnisnahme_am": datetime.datetime(2025, 9, 26, 11, 2, 0),
-                "kenntnisnahme_durch": "Siebert",
-                "massnahme": "Rechtsklick auf die Kachel -> Schutz Pausieren",
-                "erledigt_am": datetime.datetime(2025, 9, 26, 11, 2, 0),
-                "erledigt_durch": "Siebert",
-                "kategorie": "A",
-                "info": "",
-                "reko": "REKO"
-            },
-            {
-                "meldung_am": datetime.datetime(2026, 1, 23, 9, 31, 45),
-                "meldung_durch": "Dr.Schmidt",
-                "thema": "Reko Protokoll funktioniert, kein stabiler Prozess",
-                "kenntnisnahme_am": datetime.datetime(2026, 1, 27, 8, 0, 0),
-                "kenntnisnahme_durch": "Siebert",
-                "massnahme": "Speicher Geupdated, der Indexer muss noch ein Fehler behoben werden, in arbeit.",
-                "erledigt_am": None,
-                "erledigt_durch": "",
-                "kategorie": "",
-                "info": "",
-                "reko": ""
-            },
-        ]
-    },
-    {
-        "name": "Med.&Verbr.-stoff",
-        "leiter": "Zeller",
-        "leiter_email": "tobias_felix.zeller@mercedes-benz.com",
-        "stellvertreter": "Breig",
-        "data": [
-            {
-                "meldung_am": datetime.datetime(2025, 9, 1, 11, 18, 52),
-                "meldung_durch": "Dr.Schmidt",
-                "thema": "Antibiotika sind teilweise abgelaufen, nicht geordnet gelagert",
-                "kenntnisnahme_am": None,
-                "kenntnisnahme_durch": "",
-                "massnahme": "Es wurde ein Verfalls Tabelle angelegt an der Innenseite des Schranks die Monatlich kontrolliert wird",
-                "erledigt_am": datetime.datetime(2025, 9, 26, 10, 55, 15),
-                "erledigt_durch": "Siebert",
-                "kategorie": "C",
-                "info": "",
-                "reko": "Besprochen mit  Dr.Schmidt"
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 12, 15, 16, 41, 53),
-                "meldung_durch": "Dr. Vitez",
-                "thema": "Hepatitis A-Impfstoff (Havrix) in November abgelaufen",
-                "kenntnisnahme_am": None,
-                "kenntnisnahme_durch": "",
-                "massnahme": "",
-                "erledigt_am": None,
-                "erledigt_durch": "",
-                "kategorie": "C",
-                "info": "",
-                "reko": ""
-            },
-            {
-                "meldung_am": datetime.datetime(2026, 1, 23, 9, 34, 45),
-                "meldung_durch": "Dr.Schmidt",
-                "thema": "Einträge (siehe 15.12.25) in diesem Bereich werden nicht rückgemeldet bzw. abgearbeitet",
-                "kenntnisnahme_am": None,
-                "kenntnisnahme_durch": "",
-                "massnahme": "",
-                "erledigt_am": None,
-                "erledigt_durch": "",
-                "kategorie": "",
-                "info": "",
-                "reko": ""
-            },
-        ]
-    },
-    {
-        "name": "WD-Fzg & Schutzkleidg",
-        "leiter": "Wunsch",
-        "leiter_email": "Fabian.Wunsch@mercedes-benz.com",
-        "stellvertreter": "",
-        "data": [
-            {
-                "meldung_am": datetime.datetime(2025, 11, 13, 9, 5, 54),
-                "meldung_durch": "Zuber",
-                "thema": "Barduschwäsche nur Herren raus gestellt, Damen volle Kiste stehen lassen",
-                "kenntnisnahme_am": None,
-                "kenntnisnahme_durch": "",
-                "massnahme": "",
-                "erledigt_am": None,
-                "erledigt_durch": "",
-                "kategorie": "",
-                "info": "",
-                "reko": ""
-            },
-            {
-                "meldung_am": datetime.datetime(2026, 2, 3, 8, 0, 0),
-                "meldung_durch": "Putschler",
-                "thema": "Test",
-                "kenntnisnahme_am": None,
-                "kenntnisnahme_durch": "",
-                "massnahme": "Test",
-                "erledigt_am": None,
-                "erledigt_durch": "",
-                "kategorie": "",
-                "info": "",
-                "reko": ""
-            },
-        ]
-    },
-    {
-        "name": "RTW & MPG",
-        "leiter": "Goepfrich",
-        "leiter_email": "Markus.Goepfrich@mercedes-benz.com",
-        "stellvertreter": "",
-        "data": [
-            {
-                "meldung_am": datetime.datetime(2025, 7, 3, 4, 50, 44),
-                "meldung_durch": "Breig",
-                "thema": "OP-Leuchte in Ambulanz 1 defekt",
-                "kenntnisnahme_am": datetime.datetime(2025, 8, 20, 17, 13, 22),
-                "kenntnisnahme_durch": "Goepfrich",
-                "massnahme": "Reperatur durch Reposition der Halterung (Dr. Frei)",
-                "erledigt_am": datetime.datetime(2025, 8, 20, 17, 13, 13),
-                "erledigt_durch": "Goepfrich",
-                "kategorie": "A",
-                "info": "",
-                "reko": "Besprochen mit  Dr.Frei"
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 9, 10, 21, 56, 58),
-                "meldung_durch": "Wunsch",
-                "thema": "RR Manschette C3 aus dem RTW defekt, Leitung abgelöst durch MA der WF",
-                "kenntnisnahme_am": datetime.datetime(2025, 9, 13, 6, 14, 30),
-                "kenntnisnahme_durch": "Goepfrich",
-                "massnahme": "Neuteil am 24.09. erhalten u. eingeräumt. Zwischenzeitlich Nutzung d. RR-Manschette C3 KU.",
-                "erledigt_am": datetime.datetime(2025, 9, 24, 11, 24, 41),
-                "erledigt_durch": "Goepfrich",
-                "kategorie": "A",
-                "info": "",
-                "reko": "Besprochen mit  Dr.Schmidt"
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 9, 12, 4, 7, 28),
-                "meldung_durch": "Zuber",
-                "thema": "Fehlendes Sperrlager für defekte Medizinprodukte, Defekte RR Manschette vom 10.09. kann nicht entsprechend hinterlegt werden. Bitte Sperrlager definieren und kommunizieren.",
-                "kenntnisnahme_am": datetime.datetime(2025, 9, 13, 6, 14, 32),
-                "kenntnisnahme_durch": "Goepfrich",
-                "massnahme": "Einrichtung eines Sperrlagers für defekte Medizinprodukte u. -geräte in Physikalische Therapie im 029/10 Schrank 2.",
-                "erledigt_am": datetime.datetime(2025, 10, 24, 21, 17, 35),
-                "erledigt_durch": "Goepfrich",
-                "kategorie": "A",
-                "info": "",
-                "reko": "Besprochen mit  Zuber"
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 11, 6),
-                "meldung_durch": "Krempl",
-                "thema": "Cryo-Thermal Gerät im WD Kuppenheim lässt sich nicht hochfahren, Bildschirm bleibt schwarz",
-                "kenntnisnahme_am": datetime.datetime(2025, 12, 4, 15, 23, 56),
-                "kenntnisnahme_durch": "Goepfrich",
-                "massnahme": "Reparatur durch Hersteller",
-                "erledigt_am": datetime.datetime(2026, 1, 28, 4, 11, 48),
-                "erledigt_durch": "Goepfrich",
-                "kategorie": "A",
-                "info": "",
-                "reko": "Besprochen mit  Dr.Frei"
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 12, 4, 15, 24, 23),
-                "meldung_durch": "Göpfrich",
-                "thema": "Untersuchungsleuchte Ambulanz 1 defekt, Befestigung Lampenkopf gebrochen",
-                "kenntnisnahme_am": datetime.datetime(2025, 12, 4, 15, 24, 46),
-                "kenntnisnahme_durch": "Goepfrich",
-                "massnahme": "",
-                "erledigt_am": None,
-                "erledigt_durch": "",
-                "kategorie": "",
-                "info": "",
-                "reko": ""
-            },
-        ]
-    },
-    {
-        "name": "Organisation Ambulanz",
-        "leiter": "Wunsch",
-        "leiter_email": "Fabian.Wunsch@mercedes-benz.com",
-        "stellvertreter": "",
-        "data": [
-            {
-                "meldung_am": datetime.datetime(2025, 8, 19, 10, 51, 38),
-                "meldung_durch": "Putschler",
-                "thema": "EDTA Röhrchen vom 18.8. (K'heim) wurden in Rastatt nach dem Zentrifugieren in den Kühlschrank gelegt",
-                "kenntnisnahme_am": datetime.datetime(2025, 8, 19, 10, 58, 22),
-                "kenntnisnahme_durch": "Putschler",
-                "massnahme": "Rücksprache mit Labor; neue Verfahrensanweisung verschickt und visualisiert",
-                "erledigt_am": datetime.datetime(2025, 8, 19, 11, 2, 26),
-                "erledigt_durch": "Putschler",
-                "kategorie": "A",
-                "info": "",
-                "reko": ""
-            },
-        ]
-    },
-    {
-        "name": "Ablauf&Prozessprobleme",
-        "leiter": "Putschler",
-        "leiter_email": "walter.putschler@mercedes-benz.com",
-        "stellvertreter": "",
-        "data": [
-            {
-                "meldung_am": datetime.datetime(2025, 9, 1, 11, 7, 34),
-                "meldung_durch": "Dr.Schmidt",
-                "thema": "Laris Eintrag für Bereich bei EDV nicht möglich, obwohl Einträge in Bereichen zB Sekretariat/Mail und an Bereichsleiter möglich sind",
-                "kenntnisnahme_am": datetime.datetime(2025, 9, 22),
-                "kenntnisnahme_durch": "Putschler",
-                "massnahme": "Info an Harry Zuber--> Bitte Fehler prüfen und beheben",
-                "erledigt_am": None,
-                "erledigt_durch": "",
-                "kategorie": "A",
-                "info": "",
-                "reko": ""
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 9, 1, 11, 18, 10),
-                "meldung_durch": "Dr.Schmidt",
-                "thema": "Bereich Med. & Verbr.: Antibiotika sind teilweise abgelaufen, nicht geordnet gelagert; hier Laris Eintrag nicht möglich, obwohl Einträge in Bereichen zB Sekretariat/Mail und an Bereichsleiter möglich sind",
-                "kenntnisnahme_am": datetime.datetime(2025, 9, 2),
-                "kenntnisnahme_durch": "Putschler",
-                "massnahme": "Bereichverantwortlicher hat Fehler abgestellt",
-                "erledigt_am": datetime.datetime(2025, 9, 4),
-                "erledigt_durch": "Siebert",
-                "kategorie": "C",
-                "info": "",
-                "reko": ""
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 9, 23, 8, 54, 12),
-                "meldung_durch": "Dr.Schmidt",
-                "thema": "Dokument für Einverständniserklärung Blutabnahme wurden in falsche Akte gescannt",
-                "kenntnisnahme_am": datetime.datetime(2025, 9, 23),
-                "kenntnisnahme_durch": "Putschler",
-                "massnahme": "Fehler durch Sekretariat erkannt und behoben",
-                "erledigt_am": datetime.datetime(2025, 9, 23),
-                "erledigt_durch": "Radimersky",
-                "kategorie": "D",
-                "info": "",
-                "reko": ""
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 9, 23, 15, 56, 5),
-                "meldung_durch": "Krempl",
-                "thema": "Glucoseröhrchen wurden über Nacht nicht gekühlt, dafür aber nicht die EDTA-Röhrchen die am Vortag aus Kuppenheim gebracht wurden.",
-                "kenntnisnahme_am": datetime.datetime(2025, 9, 24),
-                "kenntnisnahme_durch": "Putschler",
-                "massnahme": "Laborergebnis wird abgewartet; bei Abweichung werden die betreffenden Patienten erneut einbestellt",
-                "erledigt_am": datetime.datetime(2025, 9, 24),
-                "erledigt_durch": "Putschler",
-                "kategorie": "C",
-                "info": "Mit Mitarbeiter persönlich besprochen",
-                "reko": ""
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 9, 26, 8, 14, 40),
-                "meldung_durch": "Putschler",
-                "thema": "Serumröhrchen von drei Patienten aus Kuppenheim wurden am Vortag nicht aus der Zentrifuge genommen und waren 16 Stunden ungekühlt",
-                "kenntnisnahme_am": datetime.datetime(2025, 9, 26, 8, 14, 21),
-                "kenntnisnahme_durch": "Putschler",
-                "massnahme": "Serumröhrchen in den Kühlschrank getan; Rücksprache mit Arzt ob noch zu verwenden",
-                "erledigt_am": None,
-                "erledigt_durch": "",
-                "kategorie": "C",
-                "info": "",
-                "reko": ""
-            },
-            {
-                "meldung_am": datetime.datetime(2025, 10, 20, 7, 9, 16),
-                "meldung_durch": "Zuber",
-                "thema": "Testmeldung aus Qualitätsgründen",
-                "kenntnisnahme_am": None,
-                "kenntnisnahme_durch": "",
-                "massnahme": "",
-                "erledigt_am": None,
-                "erledigt_durch": "",
-                "kategorie": "",
-                "info": "",
-                "reko": ""
-            },
-        ]
-    },
-    {
-        "name": "BGF",
-        "leiter": "Zieger-Buchta",
-        "leiter_email": "katrin.zieger-buchta@mercedes-benz.com",
-        "stellvertreter": "Müller-Horn",
-        "data": []
-    },
-    {
-        "name": "Getriebewerk",
-        "leiter": "Dr.Frei",
-        "leiter_email": "markus.frei@mercedes-benz.com",
-        "stellvertreter": "Dr.Schmidt",
-        "data": []
-    },
-    {
-        "name": "Hygiene",
-        "leiter": "Wunsch",
-        "leiter_email": "Fabian.Wunsch@mercedes-benz.com",
-        "stellvertreter": "",
-        "data": [
-            {
-                "meldung_am": datetime.datetime(2026, 2, 2),
-                "meldung_durch": "Wunsch",
-                "thema": "Hygiene Physikalische + Ruheraum, in letzter Zeit öfters schmutzige Liegen & Schwämme noch am Gerät",
-                "kenntnisnahme_am": None,
-                "kenntnisnahme_durch": "",
-                "massnahme": "",
-                "erledigt_am": None,
-                "erledigt_durch": "",
-                "kategorie": "A",
-                "info": "",
-                "reko": ""
-            },
-        ]
-    },
+    {"name": "Sekretariat", "leiter": "Emily Schmidt", "leiter_email": "emily_kim.schmidt@mercedes-benz.com", "stellvertreter": "Larissa Radimersky", "data": []},
+    {"name": "EDV", "leiter": "Siebert", "leiter_email": "emanuel.siebert@mercedes-benz.com", "stellvertreter": "", "data": []},
+    {"name": "Med.&Verbr.-stoff", "leiter": "Zeller", "leiter_email": "tobias_felix.zeller@mercedes-benz.com", "stellvertreter": "Breig", "data": []},
+    {"name": "WD-Fzg & Schutzkleidg", "leiter": "Wunsch", "leiter_email": "Fabian.Wunsch@mercedes-benz.com", "stellvertreter": "", "data": []},
+    {"name": "RTW & MPG", "leiter": "Göpfrich", "leiter_email": "Markus.Goepfrich@mercedes-benz.com", "stellvertreter": "", "data": []},
+    {"name": "Organisation Ambulanz", "leiter": "Wunsch", "leiter_email": "Fabian.Wunsch@mercedes-benz.com", "stellvertreter": "", "data": []},
+    {"name": "Ablauf&Prozessprobleme", "leiter": "Putschler", "leiter_email": "walter.putschler@mercedes-benz.com", "stellvertreter": "", "data": []},
+    {"name": "BGF", "leiter": "Zieger-Buchta", "leiter_email": "katrin.zieger-buchta@mercedes-benz.com", "stellvertreter": "Müller-Horn", "data": []},
+    {"name": "Hygiene", "leiter": "Wunsch", "leiter_email": "Fabian.Wunsch@mercedes-benz.com", "stellvertreter": "", "data": []},
 ]
 
 
@@ -1059,7 +720,7 @@ for col, h in enumerate(["Name", "E-Mail", "Funktion/Bereich", "Notiz"], 1):
     set_cell(ws_hilf, 2, col, h, font=HEADER_FONT, fill=HEADER_BG, alignment=center_wrap, border=thin_border)
 
 contacts = [
-    ("Dr. Markus Frei", "markus.frei@mercedes-benz.com", "Arzt / Leiter Getriebewerk", ""),
+    ("Dr. Markus Frei", "markus.frei@mercedes-benz.com", "Arzt", ""),
     ("Dr. Sabine Schmidt", "sabine.m.schmidt@mercedes-benz.com", "Ärztin", ""),
     ("Dr. Lilla Vitez", "lilla.vitez@mercedes-benz.com", "Ärztin", ""),
     ("Bernd Breig", "bernd.breig@mercedes-benz.com", "Stv. Med.&Verbr.-stoff", ""),
@@ -1068,7 +729,7 @@ contacts = [
     ("Walter Putschler", "walter.putschler@mercedes-benz.com", "Leiter Ablauf&Prozessprobleme", "BCC-Empfänger"),
     ("Benjamin Jochim", "benjamin.jochim@mercedes-benz.com", "Mitarbeiter", ""),
     ("Harry Zuber", "harry.zuber@mercedes-benz.com", "Mitarbeiter", ""),
-    ("Markus Göpfrich", "Markus.Goepfrich@mercedes-benz.com", "Leiter RTW & MPG", ""),
+    ("Markus Göpfrich", "Markus.Goepfrich@mercedes-benz.com", "Leiter RTW & MPG", "Name im Dropdown: Göpfrich"),
     ("Tobias Zeller", "tobias_felix.zeller@mercedes-benz.com", "Leiter Med.&Verbr.-stoff", ""),
     ("Emily Kim Schmidt", "emily_kim.schmidt@mercedes-benz.com", "Leiterin Sekretariat", ""),
     ("Katrin Zieger-Buchta", "katrin.zieger-buchta@mercedes-benz.com", "Leiterin BGF", ""),
