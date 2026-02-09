@@ -338,9 +338,8 @@ def create_year_sheet(wb, year_name, data, is_active=False):
     # ── Conditional Formatting ────────────────────────────────────────────
     add_kvp_conditional_formatting(ws, MAX_DATA_ROW)
 
-    # ── Freeze + Filter ──────────────────────────────────────────────────
+    # ── Freeze panes ────────────────────────────────────────────────────
     ws.freeze_panes = "A5"
-    ws.auto_filter.ref = f"A4:I{next_row + 49}"
 
     # ── Print Setup ──────────────────────────────────────────────────────
     setup_print(ws, f"KVP {year_name}")
