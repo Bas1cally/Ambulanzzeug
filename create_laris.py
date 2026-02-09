@@ -691,9 +691,8 @@ for b_idx, bereich in enumerate(BEREICHE):
     # ── Conditional Formatting ───────────────────────────────────────────────
     add_conditional_formatting(ws, MAX_DATA_ROW)
 
-    # ── Freeze + Filter ──────────────────────────────────────────────────────
+    # ── Freeze panes ────────────────────────────────────────────────────────
     ws.freeze_panes = "A5"
-    ws.auto_filter.ref = f"A4:L{next_data_row + 49}"
 
     # ── Print Setup ──────────────────────────────────────────────────────────
     setup_print(ws, bereich["name"])
