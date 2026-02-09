@@ -233,6 +233,21 @@ def add_kvp_conditional_formatting(ws, max_row=204):
         stopIfTrue=True,
         fill=PatternFill(start_color="FFCDD2", end_color="FFCDD2", fill_type="solid")))
 
+    # 9) Umsetzungsstatus Farben
+    umsetzung_range = f"I5:I{max_row}"
+    ws.conditional_formatting.add(umsetzung_range, CellIsRule(
+        operator="equal", formula=['"Umgesetzt"'], stopIfTrue=False,
+        fill=PatternFill(start_color="C8E6C9", end_color="C8E6C9", fill_type="solid"),
+        font=Font(name="Calibri", size=10, bold=True, color="1B5E20")))
+    ws.conditional_formatting.add(umsetzung_range, CellIsRule(
+        operator="equal", formula=['"In Umsetzung"'], stopIfTrue=False,
+        fill=PatternFill(start_color="BBDEFB", end_color="BBDEFB", fill_type="solid"),
+        font=Font(name="Calibri", size=10, bold=True, color="1565C0")))
+    ws.conditional_formatting.add(umsetzung_range, CellIsRule(
+        operator="equal", formula=['"Offen"'], stopIfTrue=False,
+        fill=PatternFill(start_color="FFE0B2", end_color="FFE0B2", fill_type="solid"),
+        font=Font(name="Calibri", size=10, bold=True, color="E65100")))
+
 
 def create_year_sheet(wb, year_name, data, is_active=False):
     """Create a KVP year sheet with data."""
