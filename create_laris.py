@@ -63,27 +63,27 @@ REKO_OPTIONS = [
     "Besprochen mit  Jochim",
     "Besprochen mit  Zuber",
     "Besprochen mit  Göpfrich",
-    "Besprochen mit  Jochim",
     "Besprochen mit  Wunsch",
     "Besprochen mit  Zeller",
     "Besprochen mit  Schmidt",
     "Besprochen mit  Zieger-Buchta",
     "Besprochen mit  Müller-Horn",
     "Besprochen mit  Radimersky",
-    "Besprochen mit  Wunsch",
 ]
 
 # ── Bereiche with leaders and existing data ──────────────────────────────────
+TAB_COLORS = ["1976D2", "43A047", "FB8C00", "8E24AA", "E53935", "00ACC1", "6D4C41", "C0CA33", "F06292"]
+
 BEREICHE = [
-    {"name": "Sekretariat", "leiter": "Emily Schmidt", "leiter_email": "emily_kim.schmidt@mercedes-benz.com", "stellvertreter": "Larissa Radimersky", "data": []},
-    {"name": "EDV", "leiter": "Siebert", "leiter_email": "emanuel.siebert@mercedes-benz.com", "stellvertreter": "", "data": []},
-    {"name": "Med.&Verbr.-stoff", "leiter": "Zeller", "leiter_email": "tobias_felix.zeller@mercedes-benz.com", "stellvertreter": "Breig", "data": []},
-    {"name": "WD-Fzg & Schutzkleidg", "leiter": "Wunsch", "leiter_email": "Fabian.Wunsch@mercedes-benz.com", "stellvertreter": "", "data": []},
-    {"name": "RTW & MPG", "leiter": "Göpfrich", "leiter_email": "Markus.Goepfrich@mercedes-benz.com", "stellvertreter": "", "data": []},
-    {"name": "Organisation Ambulanz", "leiter": "Wunsch", "leiter_email": "Fabian.Wunsch@mercedes-benz.com", "stellvertreter": "", "data": []},
-    {"name": "Ablauf&Prozessprobleme", "leiter": "Putschler", "leiter_email": "walter.putschler@mercedes-benz.com", "stellvertreter": "", "data": []},
-    {"name": "BGF", "leiter": "Zieger-Buchta", "leiter_email": "katrin.zieger-buchta@mercedes-benz.com", "stellvertreter": "Müller-Horn", "data": []},
-    {"name": "Hygiene", "leiter": "Wunsch", "leiter_email": "Fabian.Wunsch@mercedes-benz.com", "stellvertreter": "", "data": []},
+    {"name": "Sekretariat", "leiter": "Emily Schmidt", "leiter_email": "emily_kim.schmidt@mercedes-benz.com", "stellvertreter": "Larissa Radimersky", "stv_email": "larissa.radimersky@mercedes-benz.com", "data": []},
+    {"name": "EDV", "leiter": "Siebert", "leiter_email": "emanuel.siebert@mercedes-benz.com", "stellvertreter": "", "stv_email": "", "data": []},
+    {"name": "Med.&Verbr.-stoff", "leiter": "Zeller", "leiter_email": "tobias_felix.zeller@mercedes-benz.com", "stellvertreter": "Breig", "stv_email": "bernd.breig@mercedes-benz.com", "data": []},
+    {"name": "WD-Fzg & Schutzkleidg", "leiter": "Wunsch", "leiter_email": "Fabian.Wunsch@mercedes-benz.com", "stellvertreter": "", "stv_email": "", "data": []},
+    {"name": "RTW & MPG", "leiter": "Göpfrich", "leiter_email": "Markus.Goepfrich@mercedes-benz.com", "stellvertreter": "", "stv_email": "", "data": []},
+    {"name": "Organisation Ambulanz", "leiter": "Wunsch", "leiter_email": "Fabian.Wunsch@mercedes-benz.com", "stellvertreter": "", "stv_email": "", "data": []},
+    {"name": "Ablauf&Prozessprobleme", "leiter": "Putschler", "leiter_email": "walter.putschler@mercedes-benz.com", "stellvertreter": "", "stv_email": "", "data": []},
+    {"name": "BGF", "leiter": "Zieger-Buchta", "leiter_email": "katrin.zieger-buchta@mercedes-benz.com", "stellvertreter": "Müller-Horn", "stv_email": "Susanne.Mueller-Horn@mercedes-benz.com", "data": []},
+    {"name": "Hygiene", "leiter": "Wunsch", "leiter_email": "Fabian.Wunsch@mercedes-benz.com", "stellvertreter": "", "stv_email": "", "data": []},
 ]
 
 
@@ -163,6 +163,18 @@ def add_conditional_formatting(ws, max_row=504):
         fill=PatternFill(start_color="BBDEFB", end_color="BBDEFB", fill_type="solid"),
         font=Font(bold=True, color="1565C0")))
 
+    # 6) Pflichtfeld-Warnung: Datum da aber "Meldung durch" fehlt → rot markieren
+    ws.conditional_formatting.add(f"C5:C{max_row}", FormulaRule(
+        formula=[f'AND($B5<>"",$C5="")'],
+        stopIfTrue=True,
+        fill=PatternFill(start_color="FFCDD2", end_color="FFCDD2", fill_type="solid")))
+
+    # 7) Pflichtfeld-Warnung: Datum da aber "Thema" fehlt → rot markieren
+    ws.conditional_formatting.add(f"D5:D{max_row}", FormulaRule(
+        formula=[f'AND($B5<>"",$D5="")'],
+        stopIfTrue=True,
+        fill=PatternFill(start_color="FFCDD2", end_color="FFCDD2", fill_type="solid")))
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # SHEET 1: Dashboard (Gesamtübersicht)
@@ -234,7 +246,8 @@ for i, bereich in enumerate(BEREICHE):
     safe_name = f"'{name}'"  # Quote sheet name for formulas
 
     alt_fill = LIGHT_GRAY_BG if i % 2 == 0 else WHITE_BG
-    set_cell(ws_dash, r, 2, name, font=BOLD_FONT, fill=alt_fill, border=thin_border)
+    bereich_cell = set_cell(ws_dash, r, 2, name, font=Font(name="Calibri", size=10, bold=True, color="0F3460", underline="single"), fill=alt_fill, border=thin_border)
+    bereich_cell.hyperlink = f"#'{name}'!A1"
 
     # Meldungen = COUNTA of column B (Meldung am)
     set_cell(ws_dash, r, 3, None, font=COUNTER_FONT, fill=alt_fill, alignment=center_align, border=thin_border)
@@ -329,6 +342,7 @@ legends = [
     ("FFF8E1", "Zeile gelb", "Meldung offen (noch nicht erledigt)"),
     ("E8F5E9", "Zeile grün", "Meldung erledigt"),
     ("FFCDD2", "Zeile rot", "Überfällig (>14 Tage ohne Kenntnisnahme)"),
+    ("FFCDD2", "Zelle rot", "Pflichtfeld fehlt (Name oder Thema leer)"),
     ("D4EDDA", "Kategorie A", "Unsichere Handlung"),
     ("FFF3CD", "Kategorie B", "Beinahefehler ohne Folgen"),
     ("FFE0B2", "Kategorie C", "Fehler mit leichten bis mittelschweren Folgen"),
@@ -453,6 +467,10 @@ for i, txt in enumerate([
     "Farbige Zeilen: Grün=Erledigt, Gelb=Offen, Rot=Überfällig (>14 Tage)",
     "Neue Meldungen (letzte 7 Tage) werden in der Nr.-Spalte blau markiert",
     "Druckoptimiert: Querformat A4, Kopfzeile wiederholt sich automatisch",
+    "Pflichtfelder: Fehlender Name/Thema wird rot markiert wenn Datum eingetragen",
+    "Jeder Bereich hat eine eigene Tab-Farbe für schnelle Navigation",
+    "Stellvertreter werden automatisch in CC der Mail genommen",
+    "Dashboard-Links: Klick auf Bereichsname springt direkt zum Sheet",
 ]):
     r = row + 1 + i
     set_cell(ws_info, r, 2, "✓", font=Font(name="Calibri", size=10, bold=True, color="28A745"))
@@ -460,7 +478,7 @@ for i, txt in enumerate([
     set_cell(ws_info, r, 3, txt, font=NORMAL_FONT)
 
 # Bereichstabelle
-row = 41
+row = 46
 headers_info = ["Bereich", "", "Leiter", "", "Stellvertreter", ""]
 for c, h in enumerate(headers_info, 2):
     set_cell(ws_info, row, c, h, font=HEADER_FONT, fill=HEADER_BG, alignment=center_align, border=thin_border)
@@ -504,21 +522,27 @@ KATEGORIE_LEGEND = (
 
 MAX_DATA_ROW = 504
 
-for bereich in BEREICHE:
+for b_idx, bereich in enumerate(BEREICHE):
     ws = wb.create_sheet(title=bereich["name"])
-    ws.sheet_properties.tabColor = "0F3460"
+    ws.sheet_properties.tabColor = TAB_COLORS[b_idx % len(TAB_COLORS)]
 
     # Column widths
     for i, (_, width) in enumerate(HEADERS, 1):
         ws.column_dimensions[get_column_letter(i)].width = width
 
-    # ── Row 1: Bereich title ─────────────────────────────────────────────────
-    ws.merge_cells("A1:L1")
+    # ── Row 1: Bereich title + Dashboard link ───────────────────────────────
+    ws.merge_cells("A1:K1")
     set_cell(ws, 1, 1, bereich["name"],
              font=Font(name="Calibri", size=16, bold=True, color="FFFFFF"),
              fill=PatternFill(start_color="0F3460", end_color="0F3460", fill_type="solid"),
              alignment=Alignment(horizontal="left", vertical="center"))
     ws.row_dimensions[1].height = 35
+
+    dash_link = set_cell(ws, 1, 12, "← Dashboard",
+        font=Font(name="Calibri", size=10, bold=True, color="FFFFFF", underline="single"),
+        fill=PatternFill(start_color="0F3460", end_color="0F3460", fill_type="solid"),
+        alignment=Alignment(horizontal="center", vertical="center"))
+    dash_link.hyperlink = "#Dashboard!A1"
 
     # ── Row 2: Counters + Kategorie-Legende ──────────────────────────────────
     ws.row_dimensions[2].height = 55
@@ -545,6 +569,8 @@ for bereich in BEREICHE:
     leiter_email = bereich["leiter_email"]
     leiter_name = bereich["leiter"]
     bereich_name = bereich["name"]
+    stv_email = bereich.get("stv_email", "")
+    stv_name = bereich.get("stellvertreter", "")
     bcc_email = "walter.putschler@mercedes-benz.com"
 
     subject = urllib.parse.quote(f"LARIS Meldung - {bereich_name}")
@@ -552,19 +578,28 @@ for bereich in BEREICHE:
         f"Neue LARIS-Meldung im Bereich: {bereich_name}\n\n"
         f"Bitte in LARIS prüfen und bearbeiten.\n\n"
         f"Mit freundlichen Grüßen")
-    mailto_url = f"mailto:{leiter_email}?subject={subject}&bcc={bcc_email}&body={body}"
+    # Build mailto with optional CC for Stellvertreter
+    mailto_params = f"subject={subject}&bcc={bcc_email}&body={body}"
+    if stv_email:
+        mailto_params = f"cc={stv_email}&{mailto_params}"
+    mailto_url = f"mailto:{leiter_email}?{mailto_params}"
 
     ws.merge_cells("A3:G3")
+    mail_label = f"Mail an: {leiter_name}"
+    if stv_name:
+        mail_label += f" (CC: {stv_name})"
     mail_cell = set_cell(ws, 3, 1,
-        f"✉ Mail an Bereichsleiter: {leiter_name} ({leiter_email})",
+        f"✉ {mail_label}",
         font=Font(name="Calibri", size=11, bold=True, color="FFFFFF", underline="single"),
         fill=PatternFill(start_color="28A745", end_color="28A745", fill_type="solid"),
         alignment=Alignment(horizontal="center", vertical="center"))
     mail_cell.hyperlink = mailto_url
 
     ws.merge_cells("H3:L3")
-    set_cell(ws, 3, 8,
-        f"BCC an: Putschler ({bcc_email})",
+    bcc_info = f"BCC: Putschler"
+    if stv_name:
+        bcc_info += f" | CC: {stv_name}"
+    set_cell(ws, 3, 8, bcc_info,
         font=Font(name="Calibri", size=9, italic=True, color="666666"),
         fill=PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid"),
         alignment=Alignment(horizontal="center", vertical="center"))
