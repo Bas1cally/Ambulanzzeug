@@ -415,7 +415,7 @@ ws_dash.row_dimensions[6].height = 8
 
 # ── Jahresübersicht Tabelle ───────────────────────────────────────────────
 row = 7
-dash_headers = ["Jahr", "Vorschläge", "Angenommen", "Abgelehnt", "Offen", "", "Annahmequote", "Top-Thema"]
+dash_headers = ["Jahr", "Vorschläge", "Angenommen", "Abgelehnt", "Offen", "", "Annahmequote", "Letzter Eintrag"]
 for c, h in enumerate(dash_headers, 2):
     set_cell(ws_dash, row, c, h, font=HEADER_FONT, fill=HEADER_BG, alignment=center_wrap, border=thin_border)
 ws_dash.row_dimensions[row].height = 30
@@ -463,9 +463,12 @@ for i, (year_name, _) in enumerate(ALL_YEARS):
     ws_dash.cell(row=r, column=8).value = f'=IF(C{r}>0,D{r}/C{r},"")'
     ws_dash.cell(row=r, column=8).number_format = "0%"
 
-    # Top-Thema (first entry)
+    # Letzter Eintrag (last non-empty Thema via LOOKUP trick)
     set_cell(ws_dash, r, 9, None, font=NORMAL_FONT, fill=alt_fill, alignment=left_wrap, border=thin_border)
-    ws_dash.cell(row=r, column=9).value = f"=IF({safe_name}!C5<>\"\",{safe_name}!C5,\"—\")"
+    ws_dash.cell(row=r, column=9).value = (
+        f'=IFERROR(LOOKUP(2,1/({safe_name}!C5:C{MAX_DATA_ROW}<>""),'
+        f'{safe_name}!C5:C{MAX_DATA_ROW}),"—")'
+    )
 
     ws_dash.row_dimensions[r].height = 28
 
