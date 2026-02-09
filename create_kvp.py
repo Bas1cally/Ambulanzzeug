@@ -56,13 +56,14 @@ NAMES = [
 HEADERS = [
     ("Nr.", 5),
     ("Datum", 13),
-    ("Thema", 60),
-    ("Ersparnis (Zeit, Geld, Kappa, u.s.w.)", 30),
-    ("Einbringender", 18),
-    ("Kommentar Bereichsverantwortlicher", 30),
-    ("Kommentar vom Gremium", 25),
+    ("Thema", 55),
+    ("Ersparnis (Zeit, Geld, Kappa, u.s.w.)", 28),
+    ("Einbringender", 16),
+    ("Kommentar Bereichsverantwortlicher", 28),
+    ("Kommentar vom Gremium", 23),
     ("Angenommen/\nAbgelehnt", 14),
-    ("Verantwortlich\nfür Umsetzung", 18),
+    ("Umsetzungs-\nstatus", 14),
+    ("Verantwortlich\nfür Umsetzung", 16),
 ]
 
 MAX_DATA_ROW = 204
@@ -178,7 +179,7 @@ def setup_print(ws, title):
 
 def add_kvp_conditional_formatting(ws, max_row=204):
     """Add conditional formatting to a KVP year sheet."""
-    data_range = f"A5:I{max_row}"
+    data_range = f"A5:J{max_row}"
 
     # 1) Angenommen = whole row light green
     ws.conditional_formatting.add(data_range, FormulaRule(
@@ -214,6 +215,24 @@ def add_kvp_conditional_formatting(ws, max_row=204):
         fill=PatternFill(start_color="BBDEFB", end_color="BBDEFB", fill_type="solid"),
         font=Font(bold=True, color="1565C0")))
 
+    # 6) Pflichtfeld: Datum da aber Thema fehlt
+    ws.conditional_formatting.add(f"C5:C{max_row}", FormulaRule(
+        formula=[f'AND($B5<>"",$C5="")'],
+        stopIfTrue=True,
+        fill=PatternFill(start_color="FFCDD2", end_color="FFCDD2", fill_type="solid")))
+
+    # 7) Pflichtfeld: Datum da aber Einbringender fehlt
+    ws.conditional_formatting.add(f"E5:E{max_row}", FormulaRule(
+        formula=[f'AND($B5<>"",$E5="")'],
+        stopIfTrue=True,
+        fill=PatternFill(start_color="FFCDD2", end_color="FFCDD2", fill_type="solid")))
+
+    # 8) Abgelehnt aber kein Gremium-Kommentar = Begründung fehlt
+    ws.conditional_formatting.add(f"G5:G{max_row}", FormulaRule(
+        formula=[f'AND($H5="Abgelehnt",$G5="")'],
+        stopIfTrue=True,
+        fill=PatternFill(start_color="FFCDD2", end_color="FFCDD2", fill_type="solid")))
+
 
 def create_year_sheet(wb, year_name, data, is_active=False):
     """Create a KVP year sheet with data."""
@@ -230,7 +249,7 @@ def create_year_sheet(wb, year_name, data, is_active=False):
         ws.column_dimensions[get_column_letter(i)].width = width
 
     # ── Row 1: Title bar ──────────────────────────────────────────────────
-    ws.merge_cells("A1:H1")
+    ws.merge_cells("A1:I1")
     set_cell(ws, 1, 1,
         f"KVP Themenliste - Werksärztlicher Dienst Rastatt/Kuppenheim - {year_name}",
         font=TITLE_FONT,
@@ -240,8 +259,8 @@ def create_year_sheet(wb, year_name, data, is_active=False):
     ws.cell(row=1, column=1).font = Font(name="Calibri", size=16, bold=True, color="FFFFFF")
     ws.row_dimensions[1].height = 38
 
-    # Dashboard link (col I)
-    dash_link = set_cell(ws, 1, 9, "← Dashboard",
+    # Dashboard link (col J)
+    dash_link = set_cell(ws, 1, 10, "← Dashboard",
         font=Font(name="Calibri", size=10, bold=True, color="FFFFFF", underline="single"),
         fill=PatternFill(start_color="0F3460", end_color="0F3460", fill_type="solid"),
         alignment=Alignment(horizontal="center", vertical="center"))
@@ -265,8 +284,46 @@ def create_year_sheet(wb, year_name, data, is_active=False):
     ws["H2"] = '=B2-D2-F2'
     set_cell(ws, 2, 8, None, font=Font(name="Calibri", size=14, bold=True, color="FF6F00"), alignment=center_align)
 
-    # ── Row 3: Spacer ─────────────────────────────────────────────────────
-    ws.row_dimensions[3].height = 6
+    # ── Row 3: Mail-Link + Dynamic Reminder ─────────────────────────────
+    ws.row_dimensions[3].height = 28
+    gremium_email = "walter.putschler@mercedes-benz.com"
+    subject = urllib.parse.quote(f"KVP Vorschlag - {year_name}")
+    body = urllib.parse.quote(
+        f"Neuer KVP-Vorschlag eingereicht.\n\n"
+        f"Bitte in der KVP-Liste {year_name} prüfen.\n\n"
+        f"Mit freundlichen Grüßen")
+    mailto_url = f"mailto:{gremium_email}?subject={subject}&body={body}"
+
+    ws.merge_cells("A3:D3")
+    mail_cell = set_cell(ws, 3, 1,
+        f"✉ Mail an KVP-Gremium (Putschler)",
+        font=Font(name="Calibri", size=10, bold=True, color="FFFFFF", underline="single"),
+        fill=PatternFill(start_color="28A745", end_color="28A745", fill_type="solid"),
+        alignment=Alignment(horizontal="center", vertical="center"))
+    mail_cell.hyperlink = mailto_url
+
+    # Dynamic reminder: count of pending proposals
+    ws.merge_cells("E3:J3")
+    reminder_cell = set_cell(ws, 3, 5, None,
+        font=Font(name="Calibri", size=10, bold=True, color="333333"),
+        alignment=Alignment(horizontal="center", vertical="center"))
+    reminder_cell.value = (
+        f'=IF(B2-D2-F2>0,'
+        f'"⚠ "&B2-D2-F2&" Vorschlag/Vorschläge ohne Entscheidung",'
+        f'"✓ Alle Vorschläge entschieden")'
+    )
+    # Orange when open proposals exist
+    ws.conditional_formatting.add("E3", FormulaRule(
+        formula=[f'(B2-D2-F2)>0'],
+        stopIfTrue=True,
+        fill=PatternFill(start_color="FF6F00", end_color="FF6F00", fill_type="solid"),
+        font=Font(name="Calibri", size=10, bold=True, color="FFFFFF")))
+    # Green when all decided
+    ws.conditional_formatting.add("E3", FormulaRule(
+        formula=[f'(B2-D2-F2)=0'],
+        stopIfTrue=True,
+        fill=PatternFill(start_color="28A745", end_color="28A745", fill_type="solid"),
+        font=Font(name="Calibri", size=10, bold=True, color="FFFFFF")))
 
     # ── Row 4: Headers ────────────────────────────────────────────────────
     ws.row_dimensions[4].height = 36
@@ -289,6 +346,13 @@ def create_year_sheet(wb, year_name, data, is_active=False):
     dv_names.promptTitle = "Einbringender"
     ws.add_data_validation(dv_names)
     dv_names.add(f"E5:E{MAX_DATA_ROW}")
+
+    # ── Data Validation: Umsetzungsstatus dropdown ────────────────────────
+    dv_umsetzung = DataValidation(type="list", formula1='"Offen,In Umsetzung,Umgesetzt"', allow_blank=True)
+    dv_umsetzung.prompt = "Umsetzungsstatus wählen"
+    dv_umsetzung.promptTitle = "Status"
+    ws.add_data_validation(dv_umsetzung)
+    dv_umsetzung.add(f"I5:I{MAX_DATA_ROW}")
 
     # ── Write data ────────────────────────────────────────────────────────
     for row_idx, entry in enumerate(data):
@@ -315,7 +379,21 @@ def create_year_sheet(wb, year_name, data, is_active=False):
         set_cell(ws, r, 6, entry.get("kommentar_bv", ""), font=NORMAL_FONT, alignment=left_wrap, border=thin_border)
         set_cell(ws, r, 7, entry.get("kommentar_gremium", ""), font=NORMAL_FONT, alignment=left_wrap, border=thin_border)
         set_cell(ws, r, 8, entry.get("status", ""), font=NORMAL_FONT, alignment=center_align, border=thin_border)
-        set_cell(ws, r, 9, entry.get("verantwortlich", ""), font=NORMAL_FONT, alignment=center_align, border=thin_border)
+
+        # Map old verantwortlich to new Umsetzungsstatus + Verantwortlich
+        verantw = entry.get("verantwortlich", "")
+        umsetzung = ""
+        if verantw.lower() == "umgesetzt":
+            umsetzung = "Umgesetzt"
+            verantw = ""
+        elif verantw.lower().startswith("in umsetzung"):
+            umsetzung = "In Umsetzung"
+            verantw = ""
+        elif verantw and entry.get("status", "") == "Angenommen":
+            umsetzung = "In Umsetzung"
+
+        set_cell(ws, r, 9, umsetzung, font=NORMAL_FONT, alignment=center_align, border=thin_border)
+        set_cell(ws, r, 10, verantw, font=NORMAL_FONT, alignment=center_align, border=thin_border)
 
         # Auto row height based on content
         thema_len = len(entry.get("thema", ""))
@@ -325,12 +403,12 @@ def create_year_sheet(wb, year_name, data, is_active=False):
     next_row = 5 + len(data)
     for r in range(next_row, next_row + 50):
         set_cell(ws, r, 1, f'=IF(B{r}<>"",ROW()-4,"")', font=BOLD_FONT, alignment=center_align, border=thin_border)
-        for col in range(2, 10):
+        for col in range(2, 11):
             set_cell(ws, r, col, None, font=NORMAL_FONT, border=thin_border)
             if col == 2:
                 ws.cell(row=r, column=col).number_format = "DD.MM.YYYY"
                 ws.cell(row=r, column=col).alignment = center_align
-            elif col in (5, 8, 9):
+            elif col in (5, 8, 9, 10):
                 ws.cell(row=r, column=col).alignment = center_align
             else:
                 ws.cell(row=r, column=col).alignment = left_wrap
@@ -524,6 +602,7 @@ legends = [
     ("D4EDDA", "Zeile grün", "Angenommen"),
     ("F8D7DA", "Zeile rot", "Abgelehnt"),
     ("FFF8E1", "Zeile gelb", "Offen (noch keine Entscheidung)"),
+    ("FFCDD2", "Zelle rot", "Pflichtfeld fehlt oder Ablehnung ohne Begründung"),
 ]
 
 for j, (color, label, desc) in enumerate(legends):
@@ -544,6 +623,11 @@ set_cell(ws_dash, info_row, 2, "Hinweise zur KVP-Liste 2026:",
 hints = [
     "Neuen KVP-Vorschlag im aktiven Jahres-Tab eintragen (Datum + Thema + Einbringender)",
     "Status wird vom Gremium auf \"Angenommen\" oder \"Abgelehnt\" gesetzt",
+    "Umsetzungsstatus per Dropdown: Offen / In Umsetzung / Umgesetzt",
+    "Mail-Link informiert das KVP-Gremium über neue Vorschläge",
+    "Dynamische Erinnerung zeigt offene Vorschläge ohne Entscheidung",
+    "Pflichtfelder: Thema/Einbringender wird rot wenn leer bei eingetragenem Datum",
+    "Ablehnungen ohne Gremium-Kommentar werden rot markiert",
     "Dashboard zeigt automatisch Statistiken über alle Jahre",
     "Einbringender kann per Dropdown ausgewählt werden",
     "Archiv-Tabs (2022-2025) enthalten alle bisherigen Vorschläge",
