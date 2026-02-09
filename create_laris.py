@@ -596,13 +596,29 @@ for b_idx, bereich in enumerate(BEREICHE):
     mail_cell.hyperlink = mailto_url
 
     ws.merge_cells("H3:L3")
-    bcc_info = f"BCC: Putschler"
-    if stv_name:
-        bcc_info += f" | CC: {stv_name}"
-    set_cell(ws, 3, 8, bcc_info,
-        font=Font(name="Calibri", size=9, italic=True, color="666666"),
-        fill=PatternFill(start_color="E8F5E9", end_color="E8F5E9", fill_type="solid"),
+    # Dynamic mail reminder: shows count of unacknowledged entries
+    reminder_cell = set_cell(ws, 3, 8, None,
+        font=Font(name="Calibri", size=11, bold=True, color="333333"),
         alignment=Alignment(horizontal="center", vertical="center"))
+    reminder_cell.value = (
+        f'=IF(COUNTIFS(B5:B{MAX_DATA_ROW},"<>",E5:E{MAX_DATA_ROW},"")>0,'
+        f'"⚠ "&COUNTIFS(B5:B{MAX_DATA_ROW},"<>",E5:E{MAX_DATA_ROW},"")&'
+        f'" Meldung(en) ohne Kenntnisnahme - Mail senden!",'
+        f'"✓ Alles bearbeitet | BCC: Putschler")'
+    )
+
+    # Conditional formatting: red when unacknowledged entries exist
+    ws.conditional_formatting.add("H3", FormulaRule(
+        formula=[f'COUNTIFS(B5:B{MAX_DATA_ROW},"<>",E5:E{MAX_DATA_ROW},"")>0'],
+        stopIfTrue=True,
+        fill=PatternFill(start_color="FF6F00", end_color="FF6F00", fill_type="solid"),
+        font=Font(name="Calibri", size=11, bold=True, color="FFFFFF")))
+    # Green when all done
+    ws.conditional_formatting.add("H3", FormulaRule(
+        formula=[f'COUNTIFS(B5:B{MAX_DATA_ROW},"<>",E5:E{MAX_DATA_ROW},"")=0'],
+        stopIfTrue=True,
+        fill=PatternFill(start_color="28A745", end_color="28A745", fill_type="solid"),
+        font=Font(name="Calibri", size=11, bold=True, color="FFFFFF")))
 
     # ── Row 4: Headers ───────────────────────────────────────────────────────
     ws.row_dimensions[4].height = 32
