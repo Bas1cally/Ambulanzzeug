@@ -279,21 +279,19 @@ set_cell(ws, 1, RESULT_COL,
     alignment=Alignment(horizontal="center", vertical="center"))
 
 # ── Row 2: G-Number Selection Row ────────────────────────────────────────────
-ws.row_dimensions[2].height = 90
-set_cell(ws, 2, 1, "▼ G-Untersuchung auswählen (✓)",
+ws.row_dimensions[2].height = 25
+set_cell(ws, 2, 1, '▼ "x" eingeben zum Auswählen →',
     font=Font(name="Calibri", size=11, bold=True, color="FFFFFF"),
     fill=PatternFill(start_color="28A745", end_color="28A745", fill_type="solid"),
     alignment=left_center)
 
 for i, (g_name, g_desc) in enumerate(G_NUMBERS):
     col = i + 2
-    cell = set_cell(ws, 2, col, None,
-        font=SELECT_FONT,
+    set_cell(ws, 2, col, None,
+        font=Font(name="Calibri", size=11, bold=True, color="B71C1C"),
         fill=WHITE_BG,
-        alignment=rotated,
+        alignment=center_align,
         border=thin_border)
-    # Add the G-number label as a comment-like sub-header in row 3
-    # The selection cell stays empty (user picks ✓ from dropdown)
 
 # Results counter in row 2
 ws.merge_cells(f"{RESULT_LETTER}2:{RESULT_LETTER2}2")
@@ -301,14 +299,13 @@ counter_cell = set_cell(ws, 2, RESULT_COL, None,
     font=Font(name="Calibri", size=12, bold=True, color="28A745"),
     fill=RESULT_BG,
     alignment=center_align)
-# Formula: count non-empty results
 counter_cell.value = (
     f'=IF(COUNTA({RESULT_LETTER2}4:{RESULT_LETTER2}31)>0,'
     f'"✓ "&COUNTA({RESULT_LETTER2}4:{RESULT_LETTER2}31)&" Untersuchung(en) erforderlich",'
-    f'"Bitte G-Nummern in Zeile 3 auswählen (✓)")'
+    f'"← x eingeben bei den gewünschten G-Nummern")'
 )
 
-# ── Row 3: G-Number Labels (rotated, with selection dropdowns) ────────────────
+# ── Row 3: G-Number Labels (rotated) ─────────────────────────────────────────
 ws.row_dimensions[3].height = 110
 set_cell(ws, 3, 1, "G-Nummer →",
     font=Font(name="Calibri", size=10, bold=True, color="0F3460"),
@@ -323,7 +320,7 @@ for i, (g_name, g_desc) in enumerate(G_NUMBERS):
         alignment=rotated,
         border=thin_border)
 
-# Results header row 3
+# Results header row 3 - shows selected G-numbers summary
 set_cell(ws, 3, RESULT_COL, None)
 set_cell(ws, 3, RESULT_COL2, "Untersuchung",
     font=Font(name="Calibri", size=10, bold=True, color="0F3460"),
@@ -331,18 +328,14 @@ set_cell(ws, 3, RESULT_COL2, "Untersuchung",
     alignment=left_center,
     border=thin_border)
 
-# Data validation for selection row (✓ or empty)
-dv_select = DataValidation(type="list", formula1='"✓"', allow_blank=True)
-dv_select.prompt = "✓ = auswählen"
-dv_select.promptTitle = "G-Untersuchung"
-ws.add_data_validation(dv_select)
-dv_select.add(f"B2:{last_g_letter}2")
+# NO data validation needed - user just types "x" freely
 
-# Conditional formatting: selected cells turn red
-ws.conditional_formatting.add(f"B2:{last_g_letter}2", CellIsRule(
-    operator="equal", formula=['"✓"'], stopIfTrue=False,
+# Conditional formatting: any non-empty selection cell turns red
+ws.conditional_formatting.add(f"B2:{last_g_letter}2", FormulaRule(
+    formula=[f'B2<>""'],
+    stopIfTrue=False,
     fill=PatternFill(start_color="FFCDD2", end_color="FFCDD2", fill_type="solid"),
-    font=Font(name="Calibri", size=9, bold=True, color="B71C1C")))
+    font=Font(name="Calibri", size=11, bold=True, color="B71C1C")))
 
 # ── Row 4+: Examination Matrix ───────────────────────────────────────────────
 for exam_idx, exam_name in enumerate(EXAMINATIONS):
@@ -392,28 +385,70 @@ for exam_idx, exam_name in enumerate(EXAMINATIONS):
     # Build OR formula: if ANY selected G-number has an x in this row
     set_cell(ws, r, RESULT_COL, None, fill=alt_fill)  # spacer
 
-    # Build formula: check if any selected G-column (row 2 = "✓") has a value in this row
-    # =IF(SUMPRODUCT(($B$2="✓")*(B{r}<>""))>0, A{r}, "")
+    # Build formula: check if any selected G-column (row 2 not empty) has a value in this row
+    # =IF(SUMPRODUCT(($B$2<>"")*( B{r}<>""))>0, A{r}, "")
     result_cell = set_cell(ws, r, RESULT_COL2, None,
         font=RESULT_NUM,
         fill=alt_fill,
         alignment=left_wrap,
         border=thin_border)
     result_cell.value = (
-        f'=IF(SUMPRODUCT(($B$2:${last_g_letter}$2="✓")*'
+        f'=IF(SUMPRODUCT(($B$2:${last_g_letter}$2<>"")*'
         f'(B{r}:{last_g_letter}{r}<>""))>0,A{r},"")'
     )
 
-# ── Special override rows after the matrix ────────────────────────────────────
-# Row for EP01/EP02 note
+# ── EP01/EP02 priority override: EP02 supersedes EP01 ─────────────────────
+# EP01 = exam_idx 9, row 13.  EP02 = exam_idx 10, row 14.
+ep01_row = 4 + 9   # row 13
+ep02_row = 4 + 10  # row 14
+# EP01 result: only show if EP01 is triggered AND EP02 is NOT triggered
+ws.cell(row=ep01_row, column=RESULT_COL2).value = (
+    f'=IF(AND(SUMPRODUCT(($B$2:${last_g_letter}$2<>"")*'
+    f'(B{ep01_row}:{last_g_letter}{ep01_row}<>""))>0,'
+    f'SUMPRODUCT(($B$2:${last_g_letter}$2<>"")*'
+    f'(B{ep02_row}:{last_g_letter}{ep02_row}<>""))=0),'
+    f'A{ep01_row},"")'
+)
+# EP02 result: show normally (already correct), but append " (ersetzt EP01)" hint
+ws.cell(row=ep02_row, column=RESULT_COL2).value = (
+    f'=IF(SUMPRODUCT(($B$2:${last_g_letter}$2<>"")*'
+    f'(B{ep02_row}:{last_g_letter}{ep02_row}<>""))>0,'
+    f'A{ep02_row}&" (ersetzt EP01)","")'
+)
+
+# ── Selected G-Numbers summary in row 3 result area ──────────────────────────
+# Use TEXTJOIN (Office 365) to show which G-numbers are selected
+set_cell(ws, 3, RESULT_COL, None)
+summary_cell = set_cell(ws, 3, RESULT_COL2, None,
+    font=Font(name="Calibri", size=9, bold=True, color="0F3460"),
+    fill=PatternFill(start_color="E8EAF6", end_color="E8EAF6", fill_type="solid"),
+    alignment=left_wrap,
+    border=thin_border)
+summary_cell.value = (
+    f'=IF(COUNTA(B2:{last_g_letter}2)>0,'
+    f'"Gewählt: "&TEXTJOIN(", ",TRUE,IF(B2:{last_g_letter}2<>"",B3:{last_g_letter}3,"")),'
+    f'"← Untersuchungen")'
+)
+
+# ── Special rows after the matrix ─────────────────────────────────────────────
+# Row for EP01/EP02 note + reset hint
 note_row = 4 + len(EXAMINATIONS) + 1
 ws.merge_cells(f"A{note_row}:{last_g_letter}{note_row}")
 set_cell(ws, note_row, 1,
-    "Hinweis: Gelbe Zellen = EP01 (Labor Blut). Wenn EP02 erforderlich, ersetzt EP02 den EP01. "
+    "Hinweis: Gelbe Zellen = EP01/EP02 (Labor Blut). Wenn EP02 erforderlich, ersetzt EP02 den EP01. "
     "Belastungs-EKG bei G35-Varianten nur ab 45 Jahre (\"45J.\").",
     font=Font(name="Calibri", size=9, italic=True, color="666666"),
     alignment=left_wrap)
 ws.row_dimensions[note_row].height = 30
+
+# Reset hint row
+reset_row = note_row + 1
+ws.merge_cells(f"A{reset_row}:{last_g_letter}{reset_row}")
+set_cell(ws, reset_row, 1,
+    "Zurücksetzen: Markieren Sie Zeile 2 (grüne Auswahlzeile), drücken Sie Entf um alle Auswahlen zu löschen.",
+    font=Font(name="Calibri", size=9, bold=True, italic=True, color="28A745"),
+    alignment=left_wrap)
+ws.row_dimensions[reset_row].height = 22
 
 # ── Freeze panes ──────────────────────────────────────────────────────────────
 ws.freeze_panes = "B4"
