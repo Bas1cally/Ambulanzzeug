@@ -161,24 +161,27 @@ def fix_formulas(ws):
                 cell.value = translate_formula(cell.value)
 
 
-def copy_sheet(ws_src, ws_dst):
+def copy_sheet(ws_src, ws_dst, row_offset=0):
     """Copy all cell values, styles, merged cells, column widths, row heights,
-    images, page setup, and other properties from ws_src to ws_dst."""
+    images, page setup, and other properties from ws_src to ws_dst.
+    row_offset: shift all rows by this amount (for appending page 2 below page 1)."""
+    from openpyxl.drawing.spreadsheet_drawing import TwoCellAnchor, AnchorMarker
 
-    # Column dimensions
-    for col_letter, dim in ws_src.column_dimensions.items():
-        ws_dst.column_dimensions[col_letter].width = dim.width
-        ws_dst.column_dimensions[col_letter].hidden = dim.hidden
+    # Column dimensions (only if first page / no offset)
+    if row_offset == 0:
+        for col_letter, dim in ws_src.column_dimensions.items():
+            ws_dst.column_dimensions[col_letter].width = dim.width
+            ws_dst.column_dimensions[col_letter].hidden = dim.hidden
 
     # Row dimensions
     for row_idx, dim in ws_src.row_dimensions.items():
         if dim.height is not None:
-            ws_dst.row_dimensions[row_idx].height = dim.height
+            ws_dst.row_dimensions[row_idx + row_offset].height = dim.height
 
     # Cell values and styles
     for row in ws_src.iter_rows():
         for cell in row:
-            new_cell = ws_dst.cell(row=cell.row, column=cell.column)
+            new_cell = ws_dst.cell(row=cell.row + row_offset, column=cell.column)
             new_cell.value = cell.value
             if cell.has_style:
                 new_cell.font = copy(cell.font)
@@ -189,34 +192,60 @@ def copy_sheet(ws_src, ws_dst):
 
     # Merged cells
     for mcr in ws_src.merged_cells.ranges:
-        ws_dst.merge_cells(str(mcr))
+        if row_offset == 0:
+            ws_dst.merge_cells(str(mcr))
+        else:
+            ws_dst.merge_cells(
+                start_row=mcr.min_row + row_offset,
+                start_column=mcr.min_col,
+                end_row=mcr.max_row + row_offset,
+                end_column=mcr.max_col,
+            )
 
-    # Images
+    # Images - offset TwoCellAnchor rows if needed
     for img in ws_src._images:
-        ws_dst._images.append(img)
+        if row_offset == 0:
+            ws_dst._images.append(img)
+        else:
+            # Deep-copy the image and adjust anchor rows
+            from openpyxl.drawing.image import Image as XlImage
+            import io
+            # Re-create image from the same ref (share the blob)
+            new_img = copy(img)
+            anchor = img.anchor
+            if isinstance(anchor, TwoCellAnchor):
+                new_anchor = TwoCellAnchor()
+                new_anchor._from = AnchorMarker(
+                    col=anchor._from.col, colOff=anchor._from.colOff,
+                    row=anchor._from.row + row_offset,
+                    rowOff=anchor._from.rowOff,
+                )
+                new_anchor.to = AnchorMarker(
+                    col=anchor.to.col, colOff=anchor.to.colOff,
+                    row=anchor.to.row + row_offset,
+                    rowOff=anchor.to.rowOff,
+                )
+                new_img.anchor = new_anchor
+            ws_dst._images.append(new_img)
 
-    # Page setup
-    ws_dst.page_setup.paperSize = ws_src.page_setup.paperSize
-    ws_dst.page_setup.orientation = ws_src.page_setup.orientation
-    ws_dst.page_setup.fitToWidth = ws_src.page_setup.fitToWidth
-    ws_dst.page_setup.fitToHeight = ws_src.page_setup.fitToHeight
+    # Page setup (only on first page)
+    if row_offset == 0:
+        ws_dst.page_setup.paperSize = ws_src.page_setup.paperSize
+        ws_dst.page_setup.orientation = ws_src.page_setup.orientation
+        ws_dst.page_setup.fitToWidth = ws_src.page_setup.fitToWidth
+        ws_dst.page_setup.fitToHeight = ws_src.page_setup.fitToHeight
 
-    # Page margins
-    src_margins = ws_src.page_margins
-    ws_dst.page_margins = PageMargins(
-        left=src_margins.left, right=src_margins.right,
-        top=src_margins.top, bottom=src_margins.bottom,
-        header=src_margins.header, footer=src_margins.footer
-    )
-
-    # Print area
-    if ws_src.print_area:
-        ws_dst.print_area = ws_src.print_area
+        src_margins = ws_src.page_margins
+        ws_dst.page_margins = PageMargins(
+            left=src_margins.left, right=src_margins.right,
+            top=src_margins.top, bottom=src_margins.bottom,
+            header=src_margins.header, footer=src_margins.footer
+        )
 
     # Row breaks
     if ws_src.row_breaks:
         for brk in ws_src.row_breaks.brk:
-            ws_dst.row_breaks.append(Break(id=brk.id, man=brk.man))
+            ws_dst.row_breaks.append(Break(id=brk.id + row_offset, man=brk.man))
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -388,8 +417,8 @@ ws_cert.sheet_properties.tabColor = "1B5E20"
 copy_sheet(ws_cert_orig, ws_cert)
 fix_formulas(ws_cert)
 
-# Override to A3 as user requested
-ws_cert.page_setup.paperSize = 8  # A3
+# A4 landscape, 2 certificates per page (matches original)
+ws_cert.page_setup.paperSize = 9  # A4
 
 # Fix print area reference (original had sheet-qualified ref)
 if ws_cert.print_area:
@@ -400,38 +429,37 @@ print(f"  Bescheinigungen: {len(ws_cert._images)} images copied")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SHEETS: BG-Liste (copied from original, preserves all 27 images per page)
+# SHEET: BG-Liste (both pages on one sheet, preserves all 27 images per page)
 # ══════════════════════════════════════════════════════════════════════════════
 print("Loading original BG-Liste...")
 wb_bg_orig = openpyxl.load_workbook(ORIG_BG)
 
-# Copy Blatt1 (participants 1-10)
-ws_bg1 = wb.create_sheet(title="BG-Liste")
-ws_bg1.sheet_properties.tabColor = "FF6F00"
-copy_sheet(wb_bg_orig["Blatt1"], ws_bg1)
-fix_formulas(ws_bg1)
+BG_PAGE_ROWS = 43  # rows per page in original
 
-# Fix the Versicherungsnummer field (D7) - was a large number, make it text
-ws_bg1["D7"].number_format = "@"
+ws_bg = wb.create_sheet(title="BG-Liste")
+ws_bg.sheet_properties.tabColor = "FF6F00"
 
-# Fix print area reference
-if ws_bg1.print_area:
-    ws_bg1.print_area = ws_bg1.print_area.replace("'Blatt1'!", "").replace("Blatt1!", "")
+# Page 1 (participants 1-10) from Blatt1
+copy_sheet(wb_bg_orig["Blatt1"], ws_bg, row_offset=0)
+fix_formulas(ws_bg)
+ws_bg["D7"].number_format = "@"
 
-print(f"  BG-Liste (Seite 1): {len(ws_bg1._images)} images copied")
+# Page break between pages
+ws_bg.row_breaks.append(Break(id=BG_PAGE_ROWS, man=True))
 
-# Copy Blatt2 (participants 11-20)
-ws_bg2 = wb.create_sheet(title="BG-Liste_2")
-ws_bg2.sheet_properties.tabColor = "FF6F00"
-copy_sheet(wb_bg_orig["Blatt2"], ws_bg2)
-fix_formulas(ws_bg2)
+# Page 2 (participants 11-20) from Blatt2, offset by BG_PAGE_ROWS
+copy_sheet(wb_bg_orig["Blatt2"], ws_bg, row_offset=BG_PAGE_ROWS)
+# Fix formulas for the newly added page 2 cells
+for row in ws_bg.iter_rows(min_row=BG_PAGE_ROWS + 1):
+    for cell in row:
+        if isinstance(cell.value, str) and cell.value.startswith("="):
+            cell.value = translate_formula(cell.value)
+ws_bg.cell(row=BG_PAGE_ROWS + 7, column=4).number_format = "@"
 
-ws_bg2["D7"].number_format = "@"
+# Fix print area to cover both pages
+ws_bg.print_area = f"A1:E{BG_PAGE_ROWS * 2}"
 
-if ws_bg2.print_area:
-    ws_bg2.print_area = ws_bg2.print_area.replace("'Blatt2'!", "").replace("Blatt2!", "")
-
-print(f"  BG-Liste_2 (Seite 2): {len(ws_bg2._images)} images copied")
+print(f"  BG-Liste: {len(ws_bg._images)} images (2 pages combined)")
 
 wb_bg_orig.close()
 
@@ -620,7 +648,7 @@ ws_ld.page_margins = PageMargins(left=0.5, right=0.5, top=0.5, bottom=0.5)
 # Reorder sheets: Teilnehmer, Bescheinigungen, BG-Liste, BG-Liste_2,
 #                 Lehrgangsdoku, Hilfslisten
 # ══════════════════════════════════════════════════════════════════════════════
-desired_order = ["Teilnehmer", "Bescheinigungen", "BG-Liste", "BG-Liste_2",
+desired_order = ["Teilnehmer", "Bescheinigungen", "BG-Liste",
                  "Lehrgangsdoku", "Hilfslisten"]
 for i, name in enumerate(desired_order):
     current_idx = wb.sheetnames.index(name)
