@@ -427,12 +427,15 @@ ws_cert.column_dimensions["AB"].width = 2.5703125
 for c in range(29, 53):   # AC-AZ
     ws_cert.column_dimensions[get_column_letter(c)].width = 2.7109375
 
-# A4 landscape, 2 certificates per page (matches original)
+# A4 landscape, 2 certificates per page, scaled to fit page width
 ws_cert.page_setup.paperSize = 9  # A4
+ws_cert.page_setup.orientation = "landscape"
+ws_cert.page_setup.fitToWidth = 1
+ws_cert.page_setup.fitToHeight = 0  # unlimited pages tall
+ws_cert.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
 
-# Fix print area reference (original had sheet-qualified ref)
-if ws_cert.print_area:
-    ws_cert.print_area = ws_cert.print_area.replace("'Sheet1'!", "").replace("Sheet1!", "")
+# Set print area: A1:AZ per page (matches original 52-column layout)
+ws_cert.print_area = "$A$1:$AZ$388"
 
 wb_cert_orig.close()
 print(f"  Bescheinigungen: {len(ws_cert._images)} images copied")
