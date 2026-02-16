@@ -463,7 +463,7 @@ for page in range(1, 10):
 
 # Print setup
 ws_cert.page_setup.orientation = "landscape"
-ws_cert.page_setup.paperSize = ws_cert.PAPERSIZE_A4
+ws_cert.page_setup.paperSize = 8  # A3
 ws_cert.page_setup.fitToWidth = 1
 ws_cert.page_setup.fitToHeight = 0
 ws_cert.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
@@ -473,150 +473,201 @@ ws_cert.oddHeader.left.text = "&1Internal"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SHEET 3: BG-Liste (BG Participant List – clean table layout)
+# SHEET 3: BG-Liste (BG Participant List – original design with images)
 # ══════════════════════════════════════════════════════════════════════════════
+from openpyxl.drawing.image import Image as XlImage
+import os
+
 ws_bg = wb.create_sheet(title="BG-Liste")
 ws_bg.sheet_properties.tabColor = "FF6F00"
 
-ws_bg.column_dimensions["A"].width = 5
-ws_bg.column_dimensions["B"].width = 30
-ws_bg.column_dimensions["C"].width = 16
-ws_bg.column_dimensions["D"].width = 20
-ws_bg.column_dimensions["E"].width = 30
+# Original column widths
+ws_bg.column_dimensions["A"].width = 10.66
+ws_bg.column_dimensions["B"].width = 62.44
+ws_bg.column_dimensions["C"].width = 38.55
+ws_bg.column_dimensions["D"].width = 40.66
+ws_bg.column_dimensions["E"].width = 21.66
+ws_bg.column_dimensions["F"].width = 4.33
 
-BG_PAGE_ROWS = 48
+# Original row heights (per page)
+BG_ROW_HEIGHTS = {
+    1: 42, 2: 41.25, 3: 38.25, 4: 38.25, 5: 42, 6: 41.25, 7: 32.25,
+    8: 41.25, 9: 34.5, 10: 39.75, 11: 39.75, 12: 39.75, 13: 39.75,
+    14: 40.5, 15: 39.75, 16: 40.5, 17: 39, 18: 39.75, 19: 39.75,
+    20: 42, 21: 27.75, 22: 32.25, 23: 32.25, 24: 32.25, 25: 30,
+    26: 25.5, 27: 31.5, 28: 8.25, 29: 25.5, 30: 16.5, 31: 25.5,
+    32: 21, 33: 26.25, 34: 15, 35: 15, 36: 29.25, 37: 29.25,
+    38: 29.25, 39: 29.25, 40: 29.25, 41: 21, 42: 9, 43: 9,
+}
+
+# Green medium border (original style)
+bg_green_r = Border(
+    right=Side(style="medium", color="70D2A6"),
+    top=Side(style="medium", color="70D2A6"),
+    bottom=Side(style="medium", color="70D2A6"))
+bg_green_l = Border(
+    left=Side(style="medium", color="70D2A6"),
+    top=Side(style="medium", color="70D2A6"),
+    bottom=Side(style="medium", color="70D2A6"))
+
+# Image definitions: (filename, from_col_0, from_row_0, cx_emu, cy_emu)
+IMG_DIR = "/home/user/Ambulanzzeug/Neu EH/extracted_images/xl/media"
+BG_IMAGES = [
+    ("image3.png", 0, 0, 11374437, 2048161),
+    ("image4.png", 0, 0, 514422, 4277322),
+    ("image6.png", 0, 4, 5601482, 314369),
+    ("image7.png", 1, 2, 1810003, 2181529),
+    ("image8.png", 0, 5, 5401429, 238158),
+    ("image9.png", 4, 2, 438211, 2486372),
+    ("image10.png", 2, 5, 5544324, 304843),
+    ("image11.png", 2, 3, 5410955, 476316),
+    ("image5.png", 0, 6, 11336332, 1086002),
+    ("image1.png", 0, 7, 533474, 6049219),
+    ("image2.png", 3, 8, 1409897, 5296639),
+    ("image12.png", 0, 19, 11355385, 771633),
+    ("image13.png", 0, 20, 1381318, 2734057),
+    ("image14.png", 0, 23, 6763694, 666843),
+    ("image15.png", 2, 20, 200053, 1943371),
+    ("image16.png", 2, 24, 790685, 314369),
+    ("image17.png", 3, 24, 3877216, 876422),
+    ("image18.png", 4, 20, 504895, 2162477),
+    ("image19.png", 0, 25, 11279174, 760400),
+    ("image20.png", 3, 25, 1458493, 4727593),
+    ("image21.png", 0, 31, 10470280, 255764),
+    ("image22.png", 2, 27, 152421, 4242233),
+    ("image23.png", 0, 29, 10918018, 258657),
+    ("image24.png", 0, 33, 10813228, 275661),
+    ("image25.png", 0, 39, 10565543, 550839),
+    ("image26.png", 0, 26, 114316, 4196409),
+    ("image27.png", 1, 39, 724001, 266737),
+]
+
+BG_PAGE_ROWS = 43  # rows per page (matches original)
+
+# Fonts matching original
+BG_F24 = Font(name="Calibri", size=24, color="000000")
+BG_F20 = Font(name="Calibri", size=20, color="000000")
+BG_F18 = Font(name="Calibri", size=18, color="000000")
+BG_F14B = Font(name="Calibri", size=14, bold=True, color="000000")
+BG_F11 = Font(name="Calibri", size=11, color="000000")
 
 
-def write_bg_page(ws, ps, tn_start):
-    """Write one BG list page (10 participants).
-    ps: page start row, tn_start: first participant number (1 or 11)
-    """
-    r = ps
+def write_bg_page(ws, row_off, tn_start):
+    """Write one BG-Liste page. row_off = 0 for page1, BG_PAGE_ROWS for page2."""
+    o = row_off  # row offset (0-based addition to 1-based rows)
 
-    # ── Company / BG header block ──────────────────────────────────────
-    ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=3)
-    set_cell(ws, r, 1, "Teilnehmerliste (BG)", font=BG_TITLE, alignment=left_center)
-    ws.row_dimensions[r].height = 28
+    # Set row heights
+    for rel_row, h in BG_ROW_HEIGHTS.items():
+        ws.row_dimensions[rel_row + o].height = h
 
-    r += 1
-    ws.row_dimensions[r].height = 6  # spacer
+    # ── Company / BG info (rows 5-7) ──────────────────────────────────
+    set_cell(ws, 5 + o, 2, "Mercedes Benz AG",
+        font=BG_F24, alignment=Alignment(horizontal="left", vertical="top"))
+    set_cell(ws, 5 + o, 4, BG_NAME,
+        font=BG_F20, alignment=left_center)
+    set_cell(ws, 6 + o, 2, "Mercedesstr. 1", font=BG_F20)
+    set_cell(ws, 7 + o, 2, COMPANY_PLZ, font=BG_F20)
+    set_cell(ws, 7 + o, 4, None, font=BG_F18,
+        alignment=Alignment(horizontal="left", vertical="top"),
+        number_format="@")
 
-    # Company info block
-    r += 1
-    set_cell(ws, r, 1, None)
-    ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=3)
-    set_cell(ws, r, 2, "Unternehmen:", font=BG_LABEL, alignment=left_center)
-    set_cell(ws, r, 4, "BG / UV-Träger:", font=BG_LABEL, alignment=left_center)
-    ws.row_dimensions[r].height = 18
-
-    r += 1
-    ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=3)
-    set_cell(ws, r, 2, COMPANY, font=BG_VALUE, alignment=left_center)
-    set_cell(ws, r, 4, BG_NAME, font=BG_VALUE, alignment=left_center)
-    ws.row_dimensions[r].height = 22
-
-    r += 1
-    ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=3)
-    set_cell(ws, r, 2, f"{COMPANY_STREET}, {COMPANY_PLZ}",
-             font=BG_VALUE, alignment=left_center)
-    ws.row_dimensions[r].height = 22
-
-    r += 1
-    ws.row_dimensions[r].height = 6  # spacer
-
-    # ── Participant table header ───────────────────────────────────────
-    r += 1
-    set_cell(ws, r, 1, "Nr.", font=HEADER_FONT, fill=HEADER_BG,
-             alignment=center, border=thin_border)
-    ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=3)
-    set_cell(ws, r, 2, "Nachname, Vorname", font=HEADER_FONT, fill=HEADER_BG,
-             alignment=center, border=thin_border)
-    set_cell(ws, r, 4, "Geburtsdatum", font=HEADER_FONT, fill=HEADER_BG,
-             alignment=center, border=thin_border)
-    ws.row_dimensions[r].height = 22
-
-    # ── Participant rows ───────────────────────────────────────────────
+    # ── Participant list (rows 10-19) ──────────────────────────────────
     for i in range(10):
-        r += 1
-        tn_row = tn_start + i + 10
-        alt = LIGHT_GRAY if i % 2 == 0 else WHITE_BG
-        ws.row_dimensions[r].height = 26
+        r = 10 + i + o
+        tn_row = tn_start + i + 10  # Teilnehmer sheet row
 
-        set_cell(ws, r, 1, i + 1, font=VALUE_FONT, fill=alt,
-                 alignment=center, border=green_border)
+        set_cell(ws, r, 1, i + 1, font=BG_F11, alignment=center)
 
-        ws.merge_cells(start_row=r, start_column=2, end_row=r, end_column=3)
-        name_cell = set_cell(ws, r, 2, None, font=BG_NAME_FONT, fill=alt,
-            alignment=left_center, border=green_border)
+        # Name: "Nachname, Vorname"
+        name_cell = set_cell(ws, r, 2, None, font=BG_F20,
+            alignment=Alignment(vertical="center"), border=bg_green_r)
         name_cell.value = (
             f'=IF(Teilnehmer!B{tn_row}<>"",'
             f'Teilnehmer!B{tn_row}&", "&Teilnehmer!C{tn_row},"")'
         )
 
-        dob_cell = set_cell(ws, r, 4, None, font=BG_NAME_FONT, fill=alt,
-            alignment=center, border=green_border)
+        # DOB
+        dob_cell = set_cell(ws, r, 3, None, font=BG_F20,
+            alignment=center, border=bg_green_r, number_format="DD.MM.YYYY")
         dob_cell.value = f'=IF(Teilnehmer!D{tn_row}<>"",Teilnehmer!D{tn_row},"")'
-        dob_cell.number_format = "DD.MM.YYYY"
 
-    r += 2  # spacer
+    # Conditional formatting: hide empty rows (white text on ", " or 0)
+    name_rng = f"B{10+o}:B{19+o}"
+    dob_rng = f"C{10+o}:C{19+o}"
+    ws.conditional_formatting.add(name_rng, CellIsRule(
+        operator="equal", formula=['", "'],
+        font=Font(color="FFFFFF")))
+    ws.conditional_formatting.add(dob_rng, CellIsRule(
+        operator="equal", formula=["0"],
+        font=Font(color="FFFFFF")))
 
-    # ── Contact / course info block ────────────────────────────────────
-    r += 1
-    set_cell(ws, r, 2, "Ansprechpartner:", font=BG_LABEL, alignment=left_center)
-    set_cell(ws, r, 3, ARZT, font=BG_VALUE, alignment=left_center)
-    set_cell(ws, r, 4, "Lehrkraft:", font=BG_LABEL, alignment=left_center)
-    set_cell(ws, r, 5, "=Teilnehmer!C4", font=BG_VALUE, alignment=left_center)
+    # ── Contact (rows 22-24) ──────────────────────────────────────────
+    set_cell(ws, 22 + o, 2, ARZT, font=BG_F14B, alignment=center)
+    set_cell(ws, 23 + o, 2, ARZT_TEL, font=BG_F14B, alignment=center)
+    set_cell(ws, 24 + o, 2, ARZT_EMAIL, font=BG_F14B,
+        alignment=Alignment(horizontal="right", vertical="center"))
 
-    r += 1
-    set_cell(ws, r, 2, "Telefon:", font=BG_LABEL, alignment=left_center)
-    set_cell(ws, r, 3, ARZT_TEL, font=BG_VALUE, alignment=left_center)
-    set_cell(ws, r, 4, "Datum:", font=BG_LABEL, alignment=left_center)
-    d = set_cell(ws, r, 5, "=Teilnehmer!C3", font=BG_VALUE, alignment=left_center)
-    d.number_format = "DD.MM.YYYY"
+    # ── Dates / course info ────────────────────────────────────────────
+    d25 = set_cell(ws, 25 + o, 4, "=Teilnehmer!C3",
+        font=BG_F18, alignment=center, number_format="DD.MM.YYYY")
 
-    r += 1
-    set_cell(ws, r, 2, "E-Mail:", font=BG_LABEL, alignment=left_center)
-    set_cell(ws, r, 3, ARZT_EMAIL, font=BG_VALUE, alignment=left_center)
-    set_cell(ws, r, 4, "Registriernr.:", font=BG_LABEL, alignment=left_center)
-    set_cell(ws, r, 5, "=Teilnehmer!C5", font=BG_VALUE, alignment=left_center)
+    ws.merge_cells(start_row=29+o, start_column=3, end_row=29+o, end_column=4)
+    set_cell(ws, 29 + o, 3, "=Teilnehmer!C3",
+        font=BG_F18, alignment=center, number_format="DD.MM.YYYY")
 
-    r += 1
-    set_cell(ws, r, 4, "QSEH-Kennziffer:", font=BG_LABEL, alignment=left_center)
-    set_cell(ws, r, 5, QSEH_KENNZIFFER, font=BG_VALUE, alignment=left_center)
+    set_cell(ws, 31 + o, 2, f"  {QSEH_KENNZIFFER}",
+        font=BG_F18, alignment=left_center, number_format="@")
+    ws.merge_cells(start_row=31+o, start_column=3, end_row=31+o, end_column=4)
+    set_cell(ws, 31 + o, 3, "=Teilnehmer!C4", font=BG_F18, alignment=center)
 
-    r += 2  # spacer
+    set_cell(ws, 33 + o, 2, None, font=BG_F18)
+    ws.cell(row=33+o, column=2).value = '="  "&Teilnehmer!C5'
+    ws.merge_cells(start_row=33+o, start_column=3, end_row=33+o, end_column=4)
+    set_cell(ws, 33 + o, 3, "Mercedes Benz AG, PKW Werk",
+        font=BG_F18, alignment=center)
 
-    # Stamp / signature area
-    r += 1
-    set_cell(ws, r, 2, "Stempel / Anschrift:", font=BG_LABEL, alignment=left_center)
-    ws.merge_cells(start_row=r, start_column=4, end_row=r, end_column=5)
-    set_cell(ws, r, 4, f"{COMPANY}, Werksärztlicher Dienst",
-             font=BG_VALUE, alignment=center)
-    r += 1
-    ws.merge_cells(start_row=r, start_column=4, end_row=r, end_column=5)
-    set_cell(ws, r, 4, f"{COMPANY_STREET}, {COMPANY_PLZ}",
-             font=BG_VALUE, alignment=center)
+    # ── Stamp/address block (rows 36-40) ──────────────────────────────
+    stamp_data = [
+        (36, "Mercedes Benz AG"),
+        (37, "Werksärztlicher Dienst"),
+        (38, "PKW-Werk Rastatt"),
+        (39, "Mercedesstrasse 1"),
+    ]
+    for sr, text in stamp_data:
+        ws.merge_cells(start_row=sr+o, start_column=3, end_row=sr+o, end_column=4)
+        set_cell(ws, sr + o, 3, text, font=BG_F18, alignment=center)
 
-    r += 1
-    set_cell(ws, r, 2, "Datum:", font=BG_LABEL, alignment=left_center)
-    d2 = set_cell(ws, r, 3, "=Teilnehmer!C3", font=BG_VALUE, alignment=left_center)
-    d2.number_format = "DD.MM.YYYY"
+    set_cell(ws, 40 + o, 2, "=Teilnehmer!C3",
+        font=BG_F18, alignment=center, number_format="DD.MM.YYYY")
+    ws.merge_cells(start_row=40+o, start_column=3, end_row=40+o, end_column=4)
+    set_cell(ws, 40 + o, 3, COMPANY_PLZ, font=BG_F18, alignment=center)
+
+    # ── Place all 27 images ───────────────────────────────────────────
+    for fname, fcol, frow, cx, cy in BG_IMAGES:
+        img_path = os.path.join(IMG_DIR, fname)
+        if os.path.exists(img_path):
+            img = XlImage(img_path)
+            img.width = cx / 9525
+            img.height = cy / 9525
+            anchor = f"{get_column_letter(fcol + 1)}{frow + 1 + o}"
+            ws.add_image(img, anchor)
 
 
 # Page 1: Participants 1-10
-write_bg_page(ws_bg, 1, 1)
+write_bg_page(ws_bg, 0, 1)
 # Page 2: Participants 11-20
-write_bg_page(ws_bg, 1 + BG_PAGE_ROWS, 11)
+write_bg_page(ws_bg, BG_PAGE_ROWS, 11)
 
 ws_bg.row_breaks.append(Break(id=BG_PAGE_ROWS))
 
-# Print setup
+# Print setup (matches original)
 ws_bg.page_setup.orientation = "portrait"
 ws_bg.page_setup.paperSize = ws_bg.PAPERSIZE_A4
 ws_bg.page_setup.fitToWidth = 1
 ws_bg.page_setup.fitToHeight = 0
 ws_bg.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
-ws_bg.page_margins = PageMargins(left=0.5, right=0.5, top=0.5, bottom=0.5)
+ws_bg.page_margins = PageMargins(left=0.197, right=0.079, top=0.394, bottom=0.394)
+ws_bg.print_area = f"A1:E{BG_PAGE_ROWS * 2}"
 
 
 # ══════════════════════════════════════════════════════════════════════════════
