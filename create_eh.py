@@ -417,6 +417,16 @@ ws_cert.sheet_properties.tabColor = "1B5E20"
 copy_sheet(ws_cert_orig, ws_cert)
 fix_formulas(ws_cert)
 
+# Set ALL column widths explicitly (original uses ranges in XML that openpyxl
+# doesn't fully transfer: cols 1-25=2.71, 26-27=2.43, 28=2.57, 29-52=2.71)
+for c in range(1, 26):    # A-Y
+    ws_cert.column_dimensions[get_column_letter(c)].width = 2.7109375
+for c in range(26, 28):   # Z-AA
+    ws_cert.column_dimensions[get_column_letter(c)].width = 2.42578125
+ws_cert.column_dimensions["AB"].width = 2.5703125
+for c in range(29, 53):   # AC-AZ
+    ws_cert.column_dimensions[get_column_letter(c)].width = 2.7109375
+
 # A4 landscape, 2 certificates per page (matches original)
 ws_cert.page_setup.paperSize = 9  # A4
 
