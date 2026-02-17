@@ -641,32 +641,123 @@ print(f"Sheets: {wb.sheetnames}")
 # ══════════════════════════════════════════════════════════════════════════════
 # Post-process: restore cert sheet XML attributes that openpyxl may change
 # ══════════════════════════════════════════════════════════════════════════════
-def post_process_xlsx(xlsx_path, orig_cert_path):
-    """Fix Bescheinigungen sheet XML to match original exactly."""
+def post_process_xlsx(xlsx_path, orig_cert_path, orig_bg_path):
+    """Fix generated xlsx: cert sheet XML, drawings, and remove external links."""
     temp_path = xlsx_path + ".tmp"
 
-    # Read original cert's sheet XML for reference
+    # ── Load original cert data ──────────────────────────────────────────
     with zipfile.ZipFile(orig_cert_path, 'r') as z_orig:
         orig_sheet_xml = z_orig.read('xl/worksheets/sheet1.xml').decode('utf-8')
+        orig_cert_drawing = z_orig.read('xl/drawings/drawing1.xml')
+        orig_cert_drawing_rels = z_orig.read('xl/drawings/_rels/drawing1.xml.rels')
+        orig_cert_images = {}
+        for f in z_orig.namelist():
+            if f.startswith('xl/media/'):
+                orig_cert_images[f] = z_orig.read(f)
 
-    # Extract key sections from original
+    # Extract key sections from original cert sheet XML
     orig_cols = re.search(r'<cols>.*?</cols>', orig_sheet_xml, re.DOTALL).group(0)
     orig_fmt = re.search(r'<sheetFormatPr[^/]*/>', orig_sheet_xml).group(0)
     orig_setup = re.search(r'<pageSetup[^/]*/>', orig_sheet_xml).group(0)
     orig_margins = re.search(r'<pageMargins[^/]*/>', orig_sheet_xml).group(0)
-
-    # Remove r:id from pageSetup (printer settings ref won't exist in new file)
     orig_setup_clean = re.sub(r'\s*r:id="[^"]*"', '', orig_setup)
-
-    # Remove x14ac:dyDescent from sheetFormatPr (namespace not declared in generated file)
     orig_fmt = re.sub(r'\s*x14ac:dyDescent="[^"]*"', '', orig_fmt)
 
+    # ── Load original BG drawing data ────────────────────────────────────
+    # Rename BG images to bg_imageN.png to avoid conflicts with cert images
+    with zipfile.ZipFile(orig_bg_path, 'r') as z_bg:
+        bg_drawing1 = z_bg.read('xl/drawings/drawing1.xml').decode('utf-8')
+        bg_drawing2 = z_bg.read('xl/drawings/drawing2.xml').decode('utf-8')
+        bg_drawing1_rels = z_bg.read('xl/drawings/_rels/drawing1.xml.rels').decode('utf-8')
+        bg_drawing2_rels = z_bg.read('xl/drawings/_rels/drawing2.xml.rels').decode('utf-8')
+        orig_bg_images = {}  # new_name -> data
+        bg_img_rename = {}   # old_name -> new_name
+        for f in z_bg.namelist():
+            if f.startswith('xl/media/'):
+                old_name = f.split('/')[-1]
+                new_name = 'bg_' + old_name
+                bg_img_rename[old_name] = new_name
+                orig_bg_images[new_name] = z_bg.read(f)
+        # Apply renames to rels
+        for old, new in bg_img_rename.items():
+            bg_drawing1_rels = bg_drawing1_rels.replace(old, new)
+            bg_drawing2_rels = bg_drawing2_rels.replace(old, new)
+
+    # ── Build combined BG drawing ────────────────────────────────────────
+    BG_ROW_OFFSET = 43
+
+    # Extract anchors from BG Blatt1 drawing (rows as-is)
+    bg1_anchors = re.findall(
+        r'<xdr:twoCellAnchor[^>]*>.*?</xdr:twoCellAnchor>', bg_drawing1, re.DOTALL)
+    bg1_one_anchors = re.findall(
+        r'<xdr:oneCellAnchor[^>]*>.*?</xdr:oneCellAnchor>', bg_drawing1, re.DOTALL)
+
+    # Extract anchors from BG Blatt2 drawing (need row offset)
+    bg2_anchors = re.findall(
+        r'<xdr:twoCellAnchor[^>]*>.*?</xdr:twoCellAnchor>', bg_drawing2, re.DOTALL)
+    bg2_one_anchors = re.findall(
+        r'<xdr:oneCellAnchor[^>]*>.*?</xdr:oneCellAnchor>', bg_drawing2, re.DOTALL)
+
+    def offset_rows(anchor_xml, offset):
+        """Add offset to <xdr:row> values in anchor XML."""
+        def add_offset(m):
+            return f'<xdr:row>{int(m.group(1)) + offset}</xdr:row>'
+        return re.sub(r'<xdr:row>(\d+)</xdr:row>', add_offset, anchor_xml)
+
+    # Remap Blatt2 image rIds to avoid conflicts with Blatt1
+    # Parse both rels to find image mappings
+    bg1_rid_map = {}
+    for m in re.finditer(r'Id="([^"]+)"[^>]*Target="([^"]+)"', bg_drawing1_rels):
+        bg1_rid_map[m.group(1)] = m.group(2).split('/')[-1]
+    bg2_rid_map = {}
+    for m in re.finditer(r'Id="([^"]+)"[^>]*Target="([^"]+)"', bg_drawing2_rels):
+        bg2_rid_map[m.group(1)] = m.group(2).split('/')[-1]
+
+    # Combined rels: keep Blatt1 rIds, remap Blatt2 to rId100+
+    combined_rels = dict(bg1_rid_map)  # rId -> image filename
+    bg2_remap = {}  # old rId -> new rId
+    next_rid = 100
+    for old_rid, img_name in bg2_rid_map.items():
+        new_rid = f'rId{next_rid}'
+        bg2_remap[old_rid] = new_rid
+        combined_rels[new_rid] = img_name
+        next_rid += 1
+
+    # Apply rId remapping to Blatt2 anchors
+    def remap_rids(anchor_xml, remap):
+        for old, new in remap.items():
+            anchor_xml = anchor_xml.replace(f'r:embed="{old}"', f'r:embed="{new}"')
+        return anchor_xml
+
+    # Build combined drawing XML
+    ns_xdr = 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing'
+    ns_a = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+    ns_r = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+
+    combined_bg_drawing = (
+        f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+        f'<xdr:wsDr xmlns:xdr="{ns_xdr}" xmlns:a="{ns_a}" xmlns:r="{ns_r}">'
+    )
+    for a in bg1_anchors + bg1_one_anchors:
+        combined_bg_drawing += a
+    for a in bg2_anchors + bg2_one_anchors:
+        combined_bg_drawing += remap_rids(offset_rows(a, BG_ROW_OFFSET), bg2_remap)
+    combined_bg_drawing += '</xdr:wsDr>'
+
+    # Build combined BG drawing rels
+    ns_rel = 'http://schemas.openxmlformats.org/package/2006/relationships'
+    ns_img_type = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/image'
+    combined_bg_rels = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
+    combined_bg_rels += f'<Relationships xmlns="{ns_rel}">'
+    for rid, img_name in combined_rels.items():
+        combined_bg_rels += f'<Relationship Id="{rid}" Type="{ns_img_type}" Target="../media/{img_name}"/>'
+    combined_bg_rels += '</Relationships>'
+
+    # ── Process the generated xlsx ───────────────────────────────────────
     with zipfile.ZipFile(xlsx_path, 'r') as zin:
-        # Find Bescheinigungen sheet file
         wb_xml = zin.read('xl/workbook.xml').decode('utf-8')
         sheets = re.findall(r'<sheet[^>]*name="([^"]+)"[^>]*r:id="([^"]+)"', wb_xml)
         rels_xml = zin.read('xl/_rels/workbook.xml.rels').decode('utf-8')
-        # Parse relationships (attribute order varies)
         rels = {}
         for rel_tag in re.findall(r'<Relationship[^>]+/>', rels_xml):
             id_m = re.search(r'Id="([^"]+)"', rel_tag)
@@ -674,69 +765,87 @@ def post_process_xlsx(xlsx_path, orig_cert_path):
             if id_m and tgt_m:
                 rels[id_m.group(1)] = tgt_m.group(1)
 
+        # Find cert sheet file
         cert_file = None
         for name, rid in sheets:
             if name == "Bescheinigungen":
                 target = rels.get(rid, '')
                 if target:
-                    # Handle both relative ("worksheets/sheet2.xml") and
-                    # absolute ("/xl/worksheets/sheet2.xml") targets
-                    if target.startswith('/'):
-                        cert_file = target.lstrip('/')
-                    else:
-                        cert_file = 'xl/' + target
+                    cert_file = target.lstrip('/') if target.startswith('/') else 'xl/' + target
                 break
 
         if not cert_file:
             print("  WARNING: Could not find Bescheinigungen for post-processing")
             return
 
+        # Fix cert sheet XML
         cert_xml = zin.read(cert_file).decode('utf-8')
-
-        # Replace cols section with original (ranges + style attributes)
         cert_xml = re.sub(r'<cols>.*?</cols>', orig_cols, cert_xml, flags=re.DOTALL)
-
-        # Replace sheetFormatPr with original (baseColWidth=10, customHeight=1)
         cert_xml = re.sub(r'<sheetFormatPr[^/]*/>', orig_fmt, cert_xml)
-
-        # Replace pageSetup with original (without r:id)
         cert_xml = re.sub(r'<pageSetup[^/]*/>', orig_setup_clean, cert_xml)
-
-        # Replace pageMargins with original
         cert_xml = re.sub(r'<pageMargins[^/]*/>', orig_margins, cert_xml)
 
-        # Add drawing reference if missing (openpyxl drops it)
-        # Check if sheet has a rels file with a drawing relationship
-        cert_rels_file = cert_file.replace('worksheets/', 'worksheets/_rels/') + '.rels'
-        drawing_rid = None
-        if cert_rels_file in zin.namelist():
-            rels_content = zin.read(cert_rels_file).decode('utf-8')
-            for rel_tag in re.findall(r'<Relationship[^>]+/>', rels_content):
-                if 'drawing' in rel_tag:
-                    id_m = re.search(r'Id="([^"]+)"', rel_tag)
-                    if id_m:
-                        drawing_rid = id_m.group(1)
-                        break
+        # 1. Remove external link references from workbook.xml.rels
+        fixed_wb_rels = re.sub(
+            r'<Relationship[^>]*externalLink[^>]*/>', '', rels_xml)
 
-        if drawing_rid and '<drawing ' not in cert_xml:
-            # Insert <drawing r:id="..."/> before </worksheet>
-            drawing_elem = f'<drawing r:id="{drawing_rid}"/>'
-            cert_xml = cert_xml.replace('</worksheet>',
-                f'{drawing_elem}</worksheet>')
-            print(f"  Added drawing reference: {drawing_rid}")
+        # Remove externalReferences from workbook.xml
+        fixed_wb_xml = re.sub(
+            r'<externalReferences>.*?</externalReferences>', '', wb_xml, flags=re.DOTALL)
 
-        # Write fixed xlsx
+        # Remove external link from content types
+        ct_xml = zin.read('[Content_Types].xml').decode('utf-8')
+        fixed_ct = re.sub(r'<Override[^>]*externalLink[^>]*/>', '', ct_xml)
+
+        # Collect files to skip (external links + openpyxl-generated drawings + images)
+        skip_files = set()
+        for f in zin.namelist():
+            if 'externalLink' in f:
+                skip_files.add(f)
+        # We'll replace drawings with originals
+        skip_files.add('xl/drawings/drawing1.xml')
+        skip_files.add('xl/drawings/_rels/drawing1.xml.rels')
+        skip_files.add('xl/drawings/drawing2.xml')
+        skip_files.add('xl/drawings/_rels/drawing2.xml.rels')
+        # Skip ALL openpyxl-generated images (1-94) - we provide originals
+        for f in zin.namelist():
+            if f.startswith('xl/media/image'):
+                skip_files.add(f)
+
         with zipfile.ZipFile(temp_path, 'w', zipfile.ZIP_DEFLATED) as zout:
             for item in zin.namelist():
-                if item == cert_file:
+                if item in skip_files:
+                    continue
+                elif item == cert_file:
                     zout.writestr(item, cert_xml.encode('utf-8'))
+                elif item == 'xl/_rels/workbook.xml.rels':
+                    zout.writestr(item, fixed_wb_rels.encode('utf-8'))
+                elif item == 'xl/workbook.xml':
+                    zout.writestr(item, fixed_wb_xml.encode('utf-8'))
+                elif item == '[Content_Types].xml':
+                    zout.writestr(item, fixed_ct.encode('utf-8'))
                 else:
                     zout.writestr(item, zin.read(item))
 
+            # Write original cert drawing + rels + images
+            zout.writestr('xl/drawings/drawing1.xml', orig_cert_drawing)
+            zout.writestr('xl/drawings/_rels/drawing1.xml.rels', orig_cert_drawing_rels)
+            for img_path, img_data in orig_cert_images.items():
+                zout.writestr(img_path, img_data)
+
+            # Write combined BG drawing + rels + original BG images (bg_imageN.png)
+            zout.writestr('xl/drawings/drawing2.xml', combined_bg_drawing.encode('utf-8'))
+            zout.writestr('xl/drawings/_rels/drawing2.xml.rels', combined_bg_rels.encode('utf-8'))
+            for img_name, img_data in orig_bg_images.items():
+                zout.writestr(f'xl/media/{img_name}', img_data)
+
     shutil.move(temp_path, xlsx_path)
-    print(f"  Post-processed: restored original cols, sheetFormat, pageSetup, margins")
+    print("  Removed external link references")
+    print("  Replaced cert drawing with original (2 images, proper XML)")
+    print(f"  Built combined BG drawing ({len(bg1_anchors)+len(bg1_one_anchors)}+"
+          f"{len(bg2_anchors)+len(bg2_one_anchors)} anchors)")
 
 
-print("\nPost-processing Bescheinigungen sheet...")
-post_process_xlsx(output_path, ORIG_CERT)
+print("\nPost-processing xlsx...")
+post_process_xlsx(output_path, ORIG_CERT, ORIG_BG)
 print("Done!")
