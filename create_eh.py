@@ -774,21 +774,31 @@ def post_process_xlsx(xlsx_path, orig_cert_path, orig_bg_path):
             if id_m and tgt_m:
                 rels[id_m.group(1)] = tgt_m.group(1)
 
-        # Find cert sheet file
+        # Find cert and BG sheet files
         cert_file = None
+        bg_file = None
         for name, rid in sheets:
+            target = rels.get(rid, '')
+            if not target:
+                continue
+            path = target.lstrip('/') if target.startswith('/') else 'xl/' + target
             if name == "Bescheinigungen":
-                target = rels.get(rid, '')
-                if target:
-                    cert_file = target.lstrip('/') if target.startswith('/') else 'xl/' + target
-                break
+                cert_file = path
+            elif name == "BG-Liste":
+                bg_file = path
 
         if not cert_file:
             print("  WARNING: Could not find Bescheinigungen for post-processing")
             return
 
         # Fix cert sheet XML
+        ns_r = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
         cert_xml = zin.read(cert_file).decode('utf-8')
+        # Add r: namespace to root element (needed for drawing reference)
+        cert_xml = cert_xml.replace(
+            'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',
+            'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+            ' xmlns:r="%s"' % ns_r)
         cert_xml = re.sub(r'<cols>.*?</cols>', orig_cols, cert_xml, flags=re.DOTALL)
         cert_xml = re.sub(r'<sheetFormatPr[^/]*/>', orig_fmt, cert_xml)
         # A3 landscape, fit to 1 page wide, unlimited pages tall
@@ -799,6 +809,19 @@ def post_process_xlsx(xlsx_path, orig_cert_path, orig_bg_path):
         cert_xml = re.sub(r'<pageMargins[^/]*/>', orig_margins, cert_xml)
         # Enable fitToPage in sheet properties
         cert_xml = cert_xml.replace('<pageSetUpPr/>', '<pageSetUpPr fitToPage="1"/>')
+        # Add drawing reference so Excel can find the cert images
+        cert_xml = cert_xml.replace('</worksheet>',
+            '<drawing r:id="rId1"/></worksheet>')
+
+        # Add drawing reference to BG-Liste sheet
+        if bg_file:
+            bg_xml = zin.read(bg_file).decode('utf-8')
+            bg_xml = bg_xml.replace(
+                'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"',
+                'xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"'
+                ' xmlns:r="%s"' % ns_r)
+            bg_xml = bg_xml.replace('</worksheet>',
+                '<drawing r:id="rId1"/></worksheet>')
 
         # 1. Remove external link references from workbook.xml.rels
         fixed_wb_rels = re.sub(
@@ -813,9 +836,18 @@ def post_process_xlsx(xlsx_path, orig_cert_path, orig_bg_path):
             "'Bescheinigungen'!$A$1:$AZ$37",
             "'Bescheinigungen'!$A$1:$AZ$388")
 
-        # Remove external link from content types
+        # Remove external link from content types and add drawing/image types
         ct_xml = zin.read('[Content_Types].xml').decode('utf-8')
         fixed_ct = re.sub(r'<Override[^>]*externalLink[^>]*/>', '', ct_xml)
+        ct_additions = ''
+        if 'Extension="png"' not in fixed_ct:
+            ct_additions += '<Default Extension="png" ContentType="image/png"/>'
+        if 'drawing1.xml' not in fixed_ct:
+            ct_additions += '<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>'
+        if 'drawing2.xml' not in fixed_ct:
+            ct_additions += '<Override PartName="/xl/drawings/drawing2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/>'
+        if ct_additions:
+            fixed_ct = fixed_ct.replace('</Types>', ct_additions + '</Types>')
 
         # Collect files to skip (external links + openpyxl-generated drawings + images)
         skip_files = set()
@@ -832,12 +864,29 @@ def post_process_xlsx(xlsx_path, orig_cert_path, orig_bg_path):
             if f.startswith('xl/media/image'):
                 skip_files.add(f)
 
+        # Sheet rels: link sheets → drawings
+        ns_rel = 'http://schemas.openxmlformats.org/package/2006/relationships'
+        ns_drawing_type = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/drawing'
+        def make_sheet_rels(drawing_target):
+            return (
+                f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+                f'<Relationships xmlns="{ns_rel}">'
+                f'<Relationship Id="rId1" Type="{ns_drawing_type}" Target="{drawing_target}"/>'
+                f'</Relationships>'
+            )
+
+        # Determine rels paths from sheet file paths
+        cert_rels_path = cert_file.replace('xl/worksheets/', 'xl/worksheets/_rels/') + '.rels'
+        bg_rels_path = bg_file.replace('xl/worksheets/', 'xl/worksheets/_rels/') + '.rels' if bg_file else None
+
         with zipfile.ZipFile(temp_path, 'w', zipfile.ZIP_DEFLATED) as zout:
             for item in zin.namelist():
                 if item in skip_files:
                     continue
                 elif item == cert_file:
                     zout.writestr(item, cert_xml.encode('utf-8'))
+                elif bg_file and item == bg_file:
+                    zout.writestr(item, bg_xml.encode('utf-8'))
                 elif item == 'xl/_rels/workbook.xml.rels':
                     zout.writestr(item, fixed_wb_rels.encode('utf-8'))
                 elif item == 'xl/workbook.xml':
@@ -846,6 +895,11 @@ def post_process_xlsx(xlsx_path, orig_cert_path, orig_bg_path):
                     zout.writestr(item, fixed_ct.encode('utf-8'))
                 else:
                     zout.writestr(item, zin.read(item))
+
+            # Write sheet rels (link sheets to their drawings)
+            zout.writestr(cert_rels_path, make_sheet_rels('../drawings/drawing1.xml'))
+            if bg_rels_path:
+                zout.writestr(bg_rels_path, make_sheet_rels('../drawings/drawing2.xml'))
 
             # Write original cert drawing + rels + images
             zout.writestr('xl/drawings/drawing1.xml', orig_cert_drawing)
