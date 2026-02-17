@@ -251,8 +251,8 @@ ws_cert.sheet_properties.tabColor = "1B5E20"
 # Fix formulas to reference internal Teilnehmer sheet
 fix_formulas(ws_cert)
 
-# Page setup: A3 landscape, fit to page width, print all 10 certificate pages
-ws_cert.page_setup.paperSize = 8  # A3
+# Page setup: A4 landscape, fit to page width, print all 10 certificate pages
+ws_cert.page_setup.paperSize = 9  # A4
 ws_cert.page_setup.orientation = "landscape"
 ws_cert.page_setup.fitToWidth = 1
 ws_cert.page_setup.fitToHeight = 0
@@ -442,6 +442,13 @@ ws_bg.cell(row=BG_PAGE_ROWS + 7, column=4).number_format = "@"
 
 # Fix print area to cover both pages
 ws_bg.print_area = f"A1:E{BG_PAGE_ROWS * 2}"
+
+# Page setup: A4 portrait, fit to page width (original used scale=56%)
+ws_bg.page_setup.paperSize = ws_bg.PAPERSIZE_A4
+ws_bg.page_setup.orientation = "portrait"
+ws_bg.page_setup.fitToWidth = 1
+ws_bg.page_setup.fitToHeight = 0
+ws_bg.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
 
 print(f"  BG-Liste: {len(ws_bg._images)} images (2 pages combined)")
 
@@ -804,7 +811,7 @@ def post_process_xlsx(xlsx_path, orig_cert_path, orig_bg_path):
         # A3 landscape, fit to 1 page wide, unlimited pages tall
         cert_xml = re.sub(
             r'<pageSetup[^/]*/>',
-            '<pageSetup paperSize="8" fitToWidth="1" fitToHeight="0" orientation="landscape"/>',
+            '<pageSetup paperSize="9" fitToWidth="1" fitToHeight="0" orientation="landscape"/>',
             cert_xml)
         cert_xml = re.sub(r'<pageMargins[^/]*/>', orig_margins, cert_xml)
         # Enable fitToPage in sheet properties
