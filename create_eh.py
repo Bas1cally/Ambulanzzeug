@@ -7,10 +7,14 @@ Replaces 4 separate files:
   3. EH_BG_Liste.xlsx  (BG participant list)
   4. Lehrgangsdoku.docx  (course protocol)
 
-APPROACH: Load originals to preserve images + exact layout, then fix formulas
-to reference internal Teilnehmer sheet instead of external file.
+APPROACH: Load original cert file as base workbook to preserve 100% of cert
+formatting (images, columns, page setup, printer settings). Add other sheets.
+Post-process the saved xlsx to fix any attributes openpyxl changes.
 """
 import re
+import os
+import shutil
+import zipfile
 import openpyxl
 from copy import copy
 from openpyxl.styles import (
@@ -115,17 +119,6 @@ def set_cell(ws, row, col, value, font=None, fill=None, alignment=None,
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Formula translation: [1]Sheet1!ref → Teilnehmer!ref
-#
-# Original Namensliste layout:
-#   Row 2-21: Participants 1-20 (A=Nachname, B=Vorname, C=Geburtsdatum)
-#   $D$2 = Registriernummer, $E$2 = Datum, $F$2 = Lehrkraft
-#   $G$2 = Beginn, $H$2 = Ende
-#
-# Our Teilnehmer layout:
-#   Row 3: C3=Datum, F3=Beginn, H3=Ende
-#   Row 4: C4=Lehrkraft, F4=Kursart
-#   Row 5: C5=Registriernr, F5=QSEH
-#   Rows 11-30: B=Nachname, C=Vorname, D=Geburtsdatum, E=Ersthelfer
 # ══════════════════════════════════════════════════════════════════════════════
 def translate_formula(formula):
     """Replace [1]Sheet1! references with Teilnehmer! references."""
@@ -207,10 +200,6 @@ def copy_sheet(ws_src, ws_dst, row_offset=0):
         if row_offset == 0:
             ws_dst._images.append(img)
         else:
-            # Deep-copy the image and adjust anchor rows
-            from openpyxl.drawing.image import Image as XlImage
-            import io
-            # Re-create image from the same ref (share the blob)
             new_img = copy(img)
             anchor = img.anchor
             if isinstance(anchor, TwoCellAnchor):
@@ -249,12 +238,23 @@ def copy_sheet(ws_src, ws_dst, row_offset=0):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Start with a fresh workbook
+# Load original cert file as BASE workbook (preserves all formatting)
 # ══════════════════════════════════════════════════════════════════════════════
-wb = openpyxl.Workbook()
+print("Loading original Bescheinigungen as base workbook...")
+wb = openpyxl.load_workbook(ORIG_CERT)
+
+# Rename Sheet1 → Bescheinigungen
+ws_cert = wb["Sheet1"]
+ws_cert.title = "Bescheinigungen"
+ws_cert.sheet_properties.tabColor = "1B5E20"
+
+# Fix formulas to reference internal Teilnehmer sheet
+fix_formulas(ws_cert)
+print(f"  Bescheinigungen: {len(ws_cert._images)} images preserved")
+
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SHEET: Hilfslisten (created first for named range)
+# SHEET: Hilfslisten (created early for named range)
 # ══════════════════════════════════════════════════════════════════════════════
 ws_help = wb.create_sheet(title="Hilfslisten")
 ws_help.sheet_properties.tabColor = "9E9E9E"
@@ -274,8 +274,7 @@ wb.defined_names.add(dn)
 # ══════════════════════════════════════════════════════════════════════════════
 # SHEET: Teilnehmer (Input Sheet)
 # ══════════════════════════════════════════════════════════════════════════════
-ws_tn = wb.active
-ws_tn.title = "Teilnehmer"
+ws_tn = wb.create_sheet(title="Teilnehmer")
 ws_tn.sheet_properties.tabColor = "0F3460"
 
 ws_tn.column_dimensions["A"].width = 5
@@ -402,43 +401,6 @@ ws_tn.page_setup.fitToHeight = 1
 ws_tn.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
 ws_tn.page_margins = PageMargins(left=0.5, right=0.5, top=0.5, bottom=0.5)
 ws_tn.freeze_panes = "A11"
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# SHEET: Bescheinigungen (copied from original, preserves images + layout)
-# ══════════════════════════════════════════════════════════════════════════════
-print("Loading original Bescheinigungen...")
-wb_cert_orig = openpyxl.load_workbook(ORIG_CERT)
-ws_cert_orig = wb_cert_orig["Sheet1"]
-
-ws_cert = wb.create_sheet(title="Bescheinigungen")
-ws_cert.sheet_properties.tabColor = "1B5E20"
-
-copy_sheet(ws_cert_orig, ws_cert)
-fix_formulas(ws_cert)
-
-# Set ALL column widths explicitly (original uses ranges in XML that openpyxl
-# doesn't fully transfer: cols 1-25=2.71, 26-27=2.43, 28=2.57, 29-52=2.71)
-for c in range(1, 26):    # A-Y
-    ws_cert.column_dimensions[get_column_letter(c)].width = 2.7109375
-for c in range(26, 28):   # Z-AA
-    ws_cert.column_dimensions[get_column_letter(c)].width = 2.42578125
-ws_cert.column_dimensions["AB"].width = 2.5703125
-for c in range(29, 53):   # AC-AZ
-    ws_cert.column_dimensions[get_column_letter(c)].width = 2.7109375
-
-# A4 landscape, 2 certificates per page, scaled to fit page width
-ws_cert.page_setup.paperSize = 9  # A4
-ws_cert.page_setup.orientation = "landscape"
-ws_cert.page_setup.fitToWidth = 1
-ws_cert.page_setup.fitToHeight = 0  # unlimited pages tall
-ws_cert.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
-
-# Set print area: A1:AZ per page (matches original 52-column layout)
-ws_cert.print_area = "$A$1:$AZ$388"
-
-wb_cert_orig.close()
-print(f"  Bescheinigungen: {len(ws_cert._images)} images copied")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -658,8 +620,7 @@ ws_ld.page_margins = PageMargins(left=0.5, right=0.5, top=0.5, bottom=0.5)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# Reorder sheets: Teilnehmer, Bescheinigungen, BG-Liste, BG-Liste_2,
-#                 Lehrgangsdoku, Hilfslisten
+# Reorder sheets: Teilnehmer, Bescheinigungen, BG-Liste, Lehrgangsdoku, Hilfslisten
 # ══════════════════════════════════════════════════════════════════════════════
 desired_order = ["Teilnehmer", "Bescheinigungen", "BG-Liste",
                  "Lehrgangsdoku", "Hilfslisten"]
@@ -675,4 +636,107 @@ output_path = "/home/user/Ambulanzzeug/EH_Kurs_2026.xlsx"
 wb.save(output_path)
 print(f"\nSaved: {output_path}")
 print(f"Sheets: {wb.sheetnames}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Post-process: restore cert sheet XML attributes that openpyxl may change
+# ══════════════════════════════════════════════════════════════════════════════
+def post_process_xlsx(xlsx_path, orig_cert_path):
+    """Fix Bescheinigungen sheet XML to match original exactly."""
+    temp_path = xlsx_path + ".tmp"
+
+    # Read original cert's sheet XML for reference
+    with zipfile.ZipFile(orig_cert_path, 'r') as z_orig:
+        orig_sheet_xml = z_orig.read('xl/worksheets/sheet1.xml').decode('utf-8')
+
+    # Extract key sections from original
+    orig_cols = re.search(r'<cols>.*?</cols>', orig_sheet_xml, re.DOTALL).group(0)
+    orig_fmt = re.search(r'<sheetFormatPr[^/]*/>', orig_sheet_xml).group(0)
+    orig_setup = re.search(r'<pageSetup[^/]*/>', orig_sheet_xml).group(0)
+    orig_margins = re.search(r'<pageMargins[^/]*/>', orig_sheet_xml).group(0)
+
+    # Remove r:id from pageSetup (printer settings ref won't exist in new file)
+    orig_setup_clean = re.sub(r'\s*r:id="[^"]*"', '', orig_setup)
+
+    # Remove x14ac:dyDescent from sheetFormatPr (namespace not declared in generated file)
+    orig_fmt = re.sub(r'\s*x14ac:dyDescent="[^"]*"', '', orig_fmt)
+
+    with zipfile.ZipFile(xlsx_path, 'r') as zin:
+        # Find Bescheinigungen sheet file
+        wb_xml = zin.read('xl/workbook.xml').decode('utf-8')
+        sheets = re.findall(r'<sheet[^>]*name="([^"]+)"[^>]*r:id="([^"]+)"', wb_xml)
+        rels_xml = zin.read('xl/_rels/workbook.xml.rels').decode('utf-8')
+        # Parse relationships (attribute order varies)
+        rels = {}
+        for rel_tag in re.findall(r'<Relationship[^>]+/>', rels_xml):
+            id_m = re.search(r'Id="([^"]+)"', rel_tag)
+            tgt_m = re.search(r'Target="([^"]+)"', rel_tag)
+            if id_m and tgt_m:
+                rels[id_m.group(1)] = tgt_m.group(1)
+
+        cert_file = None
+        for name, rid in sheets:
+            if name == "Bescheinigungen":
+                target = rels.get(rid, '')
+                if target:
+                    # Handle both relative ("worksheets/sheet2.xml") and
+                    # absolute ("/xl/worksheets/sheet2.xml") targets
+                    if target.startswith('/'):
+                        cert_file = target.lstrip('/')
+                    else:
+                        cert_file = 'xl/' + target
+                break
+
+        if not cert_file:
+            print("  WARNING: Could not find Bescheinigungen for post-processing")
+            return
+
+        cert_xml = zin.read(cert_file).decode('utf-8')
+
+        # Replace cols section with original (ranges + style attributes)
+        cert_xml = re.sub(r'<cols>.*?</cols>', orig_cols, cert_xml, flags=re.DOTALL)
+
+        # Replace sheetFormatPr with original (baseColWidth=10, customHeight=1)
+        cert_xml = re.sub(r'<sheetFormatPr[^/]*/>', orig_fmt, cert_xml)
+
+        # Replace pageSetup with original (without r:id)
+        cert_xml = re.sub(r'<pageSetup[^/]*/>', orig_setup_clean, cert_xml)
+
+        # Replace pageMargins with original
+        cert_xml = re.sub(r'<pageMargins[^/]*/>', orig_margins, cert_xml)
+
+        # Add drawing reference if missing (openpyxl drops it)
+        # Check if sheet has a rels file with a drawing relationship
+        cert_rels_file = cert_file.replace('worksheets/', 'worksheets/_rels/') + '.rels'
+        drawing_rid = None
+        if cert_rels_file in zin.namelist():
+            rels_content = zin.read(cert_rels_file).decode('utf-8')
+            for rel_tag in re.findall(r'<Relationship[^>]+/>', rels_content):
+                if 'drawing' in rel_tag:
+                    id_m = re.search(r'Id="([^"]+)"', rel_tag)
+                    if id_m:
+                        drawing_rid = id_m.group(1)
+                        break
+
+        if drawing_rid and '<drawing ' not in cert_xml:
+            # Insert <drawing r:id="..."/> before </worksheet>
+            drawing_elem = f'<drawing r:id="{drawing_rid}"/>'
+            cert_xml = cert_xml.replace('</worksheet>',
+                f'{drawing_elem}</worksheet>')
+            print(f"  Added drawing reference: {drawing_rid}")
+
+        # Write fixed xlsx
+        with zipfile.ZipFile(temp_path, 'w', zipfile.ZIP_DEFLATED) as zout:
+            for item in zin.namelist():
+                if item == cert_file:
+                    zout.writestr(item, cert_xml.encode('utf-8'))
+                else:
+                    zout.writestr(item, zin.read(item))
+
+    shutil.move(temp_path, xlsx_path)
+    print(f"  Post-processed: restored original cols, sheetFormat, pageSetup, margins")
+
+
+print("\nPost-processing Bescheinigungen sheet...")
+post_process_xlsx(output_path, ORIG_CERT)
 print("Done!")
