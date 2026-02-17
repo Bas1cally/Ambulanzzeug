@@ -250,6 +250,15 @@ ws_cert.sheet_properties.tabColor = "1B5E20"
 
 # Fix formulas to reference internal Teilnehmer sheet
 fix_formulas(ws_cert)
+
+# Page setup: A3 landscape, fit to page width, print all 10 certificate pages
+ws_cert.page_setup.paperSize = 8  # A3
+ws_cert.page_setup.orientation = "landscape"
+ws_cert.page_setup.fitToWidth = 1
+ws_cert.page_setup.fitToHeight = 0
+ws_cert.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
+ws_cert.row_breaks.append(Break(id=350, man=True))  # missing break between pages 9/10
+
 print(f"  Bescheinigungen: {len(ws_cert._images)} images preserved")
 
 
@@ -782,8 +791,14 @@ def post_process_xlsx(xlsx_path, orig_cert_path, orig_bg_path):
         cert_xml = zin.read(cert_file).decode('utf-8')
         cert_xml = re.sub(r'<cols>.*?</cols>', orig_cols, cert_xml, flags=re.DOTALL)
         cert_xml = re.sub(r'<sheetFormatPr[^/]*/>', orig_fmt, cert_xml)
-        cert_xml = re.sub(r'<pageSetup[^/]*/>', orig_setup_clean, cert_xml)
+        # A3 landscape, fit to 1 page wide, unlimited pages tall
+        cert_xml = re.sub(
+            r'<pageSetup[^/]*/>',
+            '<pageSetup paperSize="8" fitToWidth="1" fitToHeight="0" orientation="landscape"/>',
+            cert_xml)
         cert_xml = re.sub(r'<pageMargins[^/]*/>', orig_margins, cert_xml)
+        # Enable fitToPage in sheet properties
+        cert_xml = cert_xml.replace('<pageSetUpPr/>', '<pageSetUpPr fitToPage="1"/>')
 
         # 1. Remove external link references from workbook.xml.rels
         fixed_wb_rels = re.sub(
@@ -792,6 +807,11 @@ def post_process_xlsx(xlsx_path, orig_cert_path, orig_bg_path):
         # Remove externalReferences from workbook.xml
         fixed_wb_xml = re.sub(
             r'<externalReferences>.*?</externalReferences>', '', wb_xml, flags=re.DOTALL)
+
+        # Expand print area to cover all 10 certificate pages (was only row 1-37)
+        fixed_wb_xml = fixed_wb_xml.replace(
+            "'Bescheinigungen'!$A$1:$AZ$37",
+            "'Bescheinigungen'!$A$1:$AZ$388")
 
         # Remove external link from content types
         ct_xml = zin.read('[Content_Types].xml').decode('utf-8')
