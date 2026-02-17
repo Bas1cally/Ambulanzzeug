@@ -255,7 +255,7 @@ fix_formulas(ws_cert)
 ws_cert.page_setup.paperSize = 9  # A4
 ws_cert.page_setup.orientation = "landscape"
 ws_cert.page_setup.fitToWidth = 1
-ws_cert.page_setup.fitToHeight = 0
+ws_cert.page_setup.fitToHeight = 10  # 10 certificate pages (9 row breaks)
 ws_cert.sheet_properties.pageSetUpPr = openpyxl.worksheet.properties.PageSetupProperties(fitToPage=True)
 ws_cert.row_breaks.append(Break(id=350, man=True))  # missing break between pages 9/10
 
@@ -811,7 +811,7 @@ def post_process_xlsx(xlsx_path, orig_cert_path, orig_bg_path):
         # A3 landscape, fit to 1 page wide, unlimited pages tall
         cert_xml = re.sub(
             r'<pageSetup[^/]*/>',
-            '<pageSetup paperSize="9" fitToWidth="1" fitToHeight="0" orientation="landscape"/>',
+            '<pageSetup paperSize="9" fitToWidth="1" fitToHeight="10" orientation="landscape"/>',
             cert_xml)
         cert_xml = re.sub(r'<pageMargins[^/]*/>', orig_margins, cert_xml)
         # Enable fitToPage in sheet properties
