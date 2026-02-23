@@ -185,8 +185,8 @@ MATRIX = [
      g_idx("G26.1"), g_idx("G26.2"), g_idx("G26.3 / DE-ASG3"), g_idx("G29"), g_idx("G30"), g_idx("G33"),
      g_idx("G35"), g_idx("G35 China"), g_idx("G35 Südafrika"), g_idx("G38"), g_idx("G39"), g_idx("G40"),
      g_idx("G41"), g_idx("G42"), g_idx("G45"), g_idx("Höhentest/Klimakammer"), g_idx("FEV1")},
-    # 10. Labor Blut EP01: G7, G26.2, G35, G35China, G35Südafrika, G42, G44, Höhentest, O2-red, FEV1
-    {g_idx("G7"), g_idx("G26.2"), g_idx("G35"), g_idx("G35 China"), g_idx("G35 Südafrika"),
+    # 10. Labor Blut EP01: G7, G21, G26.2, G35, G35China, G35Südafrika, G42, G44, Höhentest, O2-red, FEV1
+    {g_idx("G7"), g_idx("G21"), g_idx("G26.2"), g_idx("G35"), g_idx("G35 China"), g_idx("G35 Südafrika"),
      g_idx("G42"), g_idx("G44"), g_idx("Höhentest/Klimakammer"), g_idx("O2-red."), g_idx("FEV1")},
     # 10. Labor Blut EP02: G2, G8, G15, G26.3, G27, G29, G33, G38, G40, G45
     {g_idx("G2"), g_idx("G8"), g_idx("G15"), g_idx("G26.3 / DE-ASG3"), g_idx("G27"), g_idx("G29"),
@@ -201,8 +201,8 @@ MATRIX = [
     {g_idx("G1.1-1.4"), g_idx("G7"), g_idx("G15"), g_idx("G23"), g_idx("G26.2"), g_idx("G26.3 / DE-ASG3"),
      g_idx("G27"), g_idx("G35"), g_idx("G35 China"), g_idx("G35 Südafrika"), g_idx("G38"), g_idx("G39"),
      g_idx("G40"), g_idx("G45"), g_idx("Höhentest/Klimakammer"), g_idx("O2-red.")},
-    # 14. Ruhe EKG: G7, G26.2, G26.3, G30, G35, G35China, G35Südafrika, G41, Höhentest, O2-red, AuS
-    {g_idx("G7"), g_idx("G26.2"), g_idx("G26.3 / DE-ASG3"), g_idx("G30"),
+    # 14. Ruhe EKG: G21, G26.2, G26.3, G30, G35, G35China, G35Südafrika, G41, Höhentest, O2-red, AuS
+    {g_idx("G21"), g_idx("G26.2"), g_idx("G26.3 / DE-ASG3"), g_idx("G30"),
      g_idx("G35"), g_idx("G35 China"), g_idx("G35 Südafrika"), g_idx("G41"),
      g_idx("Höhentest/Klimakammer"), g_idx("O2-red."), g_idx("AuS")},
     # 15. Belastungs EKG: G7, G26.3, G30, G35, G35China, G35Südafrika, Höhentest, O2-red
@@ -213,26 +213,26 @@ MATRIX = [
     {g_idx("DGC")},
     # 17. Vitalparameter: same as Anamnese basically (all except Z, AN)
     {0,1,2,3,4,5,6,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,25,26,27,28,29,30,31,32,33,35,36,39,40,41},
-    # 18. Röntgen: G1.1-1.4, G2, G15, G23, G26.3, G35China, G35Südafrika, G40, Höhentest
+    # 18. Röntgen: G1.1-1.4, G2, G15, G23, G26.3, G35China, G35Südafrika, Höhentest
     {g_idx("G1.1-1.4"), g_idx("G2"), g_idx("G15"), g_idx("G23"), g_idx("G26.3 / DE-ASG3"),
-     g_idx("G35 China"), g_idx("G35 Südafrika"), g_idx("G40"), g_idx("Höhentest/Klimakammer")},
+     g_idx("G35 China"), g_idx("G35 Südafrika"), g_idx("Höhentest/Klimakammer")},
     # 19. Impfen: G35, G35China, G35Südafrika, G42
     {g_idx("G35"), g_idx("G35 China"), g_idx("G35 Südafrika"), g_idx("G42")},
     # 20. Sonographie: G35China, G40
     {g_idx("G35 China"), g_idx("G40")},
     # 21. Neurol. Fokussierend: G2, G29, G41, G45
     {g_idx("G2"), g_idx("G29"), g_idx("G41"), g_idx("G45")},
-    # 22. Rhinoskopie: G15
-    {g_idx("G15")},
+    # 22. Rhinoskopie: G15, G38
+    {g_idx("G15"), g_idx("G38")},
     # 23. G35 Inhalte: G35, G35China, G35Südafrika
     {g_idx("G35"), g_idx("G35 China"), g_idx("G35 Südafrika")},
     # 24. Gesundheitsberatung: ALL 42
     set(range(42)),
     # 25. Einwilligung: ALL 42
     set(range(42)),
-    # 26. ODIN-Bogen: G1.1-1.4, G2, G8, G15, G27, G33, G38, G40, G42, G44
-    {g_idx("G1.1-1.4"), g_idx("G2"), g_idx("G8"), g_idx("G15"), g_idx("G27"), g_idx("G33"),
-     g_idx("G38"), g_idx("G40"), g_idx("G42"), g_idx("G44")},
+    # 26. ODIN-Bogen: G1.1-1.4, G2, G8, G15, G33, G38, G40, G44
+    {g_idx("G1.1-1.4"), g_idx("G2"), g_idx("G8"), g_idx("G15"), g_idx("G33"),
+     g_idx("G38"), g_idx("G40"), g_idx("G44")},
     # 27. Biomonitoring: G2, G7, G8, G15, G27, G29, G38, G39, G40, G45
     {g_idx("G2"), g_idx("G7"), g_idx("G8"), g_idx("G15"), g_idx("G27"), g_idx("G29"),
      g_idx("G38"), g_idx("G39"), g_idx("G40"), g_idx("G45")},
