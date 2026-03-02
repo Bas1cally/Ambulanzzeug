@@ -1303,76 +1303,66 @@
           }
 
           // MAIN VIEW
-          return e('div', { className: 'min-h-screen bg-gray-100 p-4' },
-            e('div', { className: 'max-w-7xl mx-auto bg-white shadow-lg rounded-lg p-8' },
-              
+          return e('div', { className: 'app-bg' },
+            e('div', { className: 'max-w-7xl mx-auto app-card', style:{marginBottom:'32px'} },
+
               // Status Bar
-              e('div', { className: 'flex justify-between items-center mb-4 pb-2 border-b' },
-                e('div', null,
-                  e('p', { className: 'text-sm text-gray-600' },
-                    syncStatus + ' • ' + user + (lastModified ? ' • Gespeichert: ' + lastModified : '')
-                  )
+              e('div', { className: 'status-bar no-print' },
+                e('div', { className: 'status-pill' },
+                  syncStatus + ' · ' + user + (lastModified ? ' · ' + lastModified : '')
                 ),
                 e('button', {
                   onClick: loadFromGitHub,
-                  className: 'bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 text-sm'
+                  className: 'cbtn cbtn-sm', style:{background:'rgba(255,255,255,.15)',color:'white',border:'1px solid rgba(255,255,255,.3)'}
                 }, '🔄 Aktualisieren')
               ),
 
+              e('div', { style:{padding:'24px'} },
+
               // Archived Banner
-              isArchived && e('div', { className: 'mb-4 bg-yellow-100 border-l-4 border-yellow-500 p-4' },
-                e('p', { className: 'font-bold text-yellow-800' },
-                  '📋 ARCHIVIERTES PROTOKOLL ' + (admin ? '(ADMIN - BEARBEITBAR)' : '(NUR ANSICHT)')
+              isArchived && e('div', { style:{marginBottom:'20px',background:'#fef9c3',borderLeft:'4px solid #eab308',padding:'14px 18px',borderRadius:'10px'} },
+                e('p', { style:{fontWeight:'700',color:'#854d0e',marginBottom:'8px'} },
+                  '📋 ARCHIVIERTES PROTOKOLL ' + (admin ? '(ADMIN — BEARBEITBAR)' : '(NUR ANSICHT)')
                 ),
                 e('button', {
                   onClick: () => {
-                    // Gesichertes Protokoll wiederherstellen statt neues zu erstellen
                     if (savedCurrentProtocol) {
                       setDate(savedCurrentProtocol.date);
                       setData(savedCurrentProtocol.data);
                       setReports(savedCurrentProtocol.reports);
                       setAgenda(savedCurrentProtocol.agenda);
-                      setIsArchived(false);
-                      setSavedCurrentProtocol(null);
+                      setIsArchived(false); setSavedCurrentProtocol(null);
                     } else {
-                      // Fallback: Falls kein gesichertes Protokoll vorhanden (sollte nicht passieren)
                       setIsArchived(false);
                       setDate(new Date().toLocaleDateString('de-DE'));
-                      setData(getInitial(data));
-                      setReports([]);
+                      setData(getInitial(data)); setReports([]);
                       setAgenda(['Bericht des Bereichsbetriebsrates (wenn anwesend)','Berichte aller Anwesenden nacheinander ("Blitzlicht")','Bericht Ltd. Werksarzt aus anderen Terminen (HR-Reko, MT-H, etc.)','Sonstiges']);
                     }
                   },
-                  className: 'mt-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700'
-                }, 'Zurück zum aktuellen Protokoll')
+                  className: 'cbtn cbtn-blue cbtn-sm'
+                }, '← Zurück zum aktuellen Protokoll')
               ),
 
               // Header
-              e('div', { className: 'flex justify-between items-start mb-6' },
+              e('div', { style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'24px',flexWrap:'wrap',gap:'16px'} },
                 e('div', null,
-                  e('h1', { className: 'text-3xl font-bold mb-2' }, 'TEILNEHMERLISTE'),
-                  e('div', { className: 'flex gap-4 items-center mb-2' },
-                    e('label', { className: 'font-semibold' }, 'DATUM:'),
+                  e('h1', { style:{fontSize:'28px',fontWeight:'800',color:'#1e293b',marginBottom:'10px',letterSpacing:'-0.5px'} }, '📋 Teilnehmerliste'),
+                  e('div', { style:{display:'flex',gap:'10px',alignItems:'center'} },
+                    e('label', { style:{fontWeight:'700',fontSize:'13px',textTransform:'uppercase',letterSpacing:'.05em',color:'#64748b'} }, 'Datum:'),
                     e('input', {
                       type: 'text', value: date, onChange: (ev) => setDate(ev.target.value),
-                      className: 'border px-2 py-1 rounded', readOnly: !admin
+                      style:{border:'2px solid #e2e8f0',padding:'6px 12px',borderRadius:'8px',fontSize:'15px',fontWeight:'600',outline:'none',background:admin?'white':'#f8fafc'},
+                      readOnly: !admin
                     })
                   )
                 ),
-                e('div', { className: 'flex gap-2 items-center flex-wrap' },
-                  e('button', {
-                    onClick: () => setDarkMode(!darkMode),
-                    className: 'bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-800',
-                    title: 'Dark Mode'
-                  }, darkMode ? '☀️' : '🌙'),
+                e('div', { className: 'no-print', style:{display:'flex',gap:'8px',alignItems:'center',flexWrap:'wrap'} },
+                  e('button', { onClick: () => setDarkMode(!darkMode), className: 'cbtn cbtn-dark', title: 'Dark Mode' }, darkMode ? '☀️' : '🌙'),
                   admin && e('button', {
                     onClick: () => {
                       const backup = localStorage.getItem('reko_backup');
                       const timestamp = localStorage.getItem('reko_backup_timestamp');
-                      if (!backup) {
-                        alert('❌ Kein Backup gefunden!');
-                        return;
-                      }
+                      if (!backup) { alert('❌ Kein Backup gefunden!'); return; }
                       if (confirm(`🆘 NOTFALL-WIEDERHERSTELLUNG\n\nBackup vom: ${timestamp || 'Unbekannt'}\n\nWARNUNG: Dies überschreibt die aktuellen Daten!\n\nFortfahren?`)) {
                         try {
                           const restored = JSON.parse(backup);
@@ -1381,225 +1371,178 @@
                           setDate(restored.date || new Date().toLocaleDateString('de-DE'));
                           setAgenda(restored.agenda || []);
                           setArchive(restored.archive || []);
-                          alert('✅ Backup wiederhergestellt!\n\nBitte prüfe die Daten und speichere manuell mit "🔄 Aktualisieren"');
+                          alert('✅ Backup wiederhergestellt!');
                           setSyncStatus('🆘 Backup wiederhergestellt');
-                        } catch (err) {
-                          alert('❌ Fehler beim Wiederherstellen:\n\n' + err.message);
-                        }
+                        } catch (err) { alert('❌ Fehler:\n\n' + err.message); }
                       }
                     },
-                    className: 'bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700',
-                    title: 'Notfall-Wiederherstellung aus lokalem Backup'
+                    className: 'cbtn cbtn-red', title: 'Notfall-Wiederherstellung'
                   }, '🆘 Notfall'),
-                  admin && e('button', {
-                    onClick: () => setShowReminderDialog(true),
-                    className: 'bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700',
-                    title: 'Mittwochs'
-                  }, '📅 Erinnerungs-Email'),
-                  admin && e('button', {
-                    onClick: () => setShowEmailDialog(true),
-                    className: 'bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700'
-                  }, '📧 Email an Abwesende'),
-                  e('button', {
-                    onClick: () => setShowArchive(true),
-                    className: 'bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700'
-                  }, '📁 Archiv (' + archive.length + ')'),
+                  admin && e('button', { onClick: () => setShowReminderDialog(true), className: 'cbtn cbtn-purple', title: 'Erinnerung an alle senden' }, '📅 Erinnerungs-Email'),
+                  admin && e('button', { onClick: () => setShowEmailDialog(true), className: 'cbtn cbtn-green' }, '📧 Email an Abwesende'),
+                  e('button', { onClick: () => setShowArchive(true), className: 'cbtn cbtn-purple' }, '📁 Archiv (' + archive.length + ')'),
                   admin && !isArchived && e('button', {
                     onClick: async () => {
                       if(!date.trim()) { alert('Bitte Datum eingeben!'); return; }
                       if(!confirm('Protokoll archivieren?')) return;
-                      
                       const archived = {
                         id: Date.now(), date, data: JSON.parse(JSON.stringify(data)),
                         reports: JSON.parse(JSON.stringify(reports)), agenda: JSON.parse(JSON.stringify(agenda)),
                         archivedAt: new Date().toLocaleString('de-DE'), archivedBy: user
                       };
-                      
-                      // State updates
                       const newArchive = [...archive, archived];
-                      setArchive(newArchive);
-                      setData(getInitial(data)); 
-                      setReports([]);
+                      setArchive(newArchive); setData(getInitial(data)); setReports([]);
                       setAgenda(['Bericht des Bereichsbetriebsrates (wenn anwesend)','Berichte aller Anwesenden nacheinander ("Blitzlicht")','Bericht Ltd. Werksarzt aus anderen Terminen (HR-Reko, MT-H, etc.)','Sonstiges']);
-                      setDate(''); 
-                      setIsArchived(false);
-                      
-                      // SOFORT SPEICHERN! (mit kleiner Verzögerung für State-Update)
+                      setDate(''); setIsArchived(false);
                       setTimeout(async () => {
                         try {
                           setSyncStatus('💾 Speichere Archiv...');
                           const now = new Date().toLocaleString('de-DE');
-                          
-                          // 1. Speichere neues leeres Protokoll
-                          const currentData = { 
-                            data: getInitial(data), 
-                            reports: [], 
-                            date: '', 
-                            agenda: ['Bericht des Bereichsbetriebsrates (wenn anwesend)','Berichte aller Anwesenden nacheinander ("Blitzlicht")','Bericht Ltd. Werksarzt aus anderen Terminen (HR-Reko, MT-H, etc.)','Sonstiges'],
-                            lastModified: now, 
-                            savedBy: user 
-                          };
-                          
-                          await fetch(`https://api.github.com/gists/${CURRENT_GIST_ID}`, {
-                            method: 'PATCH',
-                            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ files: { 'protokoll_data.json': { content: JSON.stringify(currentData, null, 2) } } })
-                          });
-                          
-                          // 2. Speichere Archive (mit neuem Eintrag)
-                          const archiveData = { 
-                            archive: newArchive,
-                            lastModified: now,
-                            savedBy: user
-                          };
-                          
-                          await fetch(`https://api.github.com/gists/${ARCHIVE_GIST_ID}`, {
-                            method: 'PATCH',
-                            headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ files: { 'archive_data.json': { content: JSON.stringify(archiveData, null, 2) } } })
-                          });
-                          
-                          setLastModified(now);
-                          setSyncStatus('✅ Archiviert & gespeichert!');
+                          const currentData = { data: getInitial(data), reports: [], date: '', agenda: ['Bericht des Bereichsbetriebsrates (wenn anwesend)','Berichte aller Anwesenden nacheinander ("Blitzlicht")','Bericht Ltd. Werksarzt aus anderen Terminen (HR-Reko, MT-H, etc.)','Sonstiges'], lastModified: now, savedBy: user };
+                          await fetch(`https://api.github.com/gists/${CURRENT_GIST_ID}`, { method: 'PATCH', headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify({ files: { 'protokoll_data.json': { content: JSON.stringify(currentData, null, 2) } } }) });
+                          const archiveData = { archive: newArchive, lastModified: now, savedBy: user };
+                          await fetch(`https://api.github.com/gists/${ARCHIVE_GIST_ID}`, { method: 'PATCH', headers: { 'Authorization': `token ${GITHUB_TOKEN}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify({ files: { 'archive_data.json': { content: JSON.stringify(archiveData, null, 2) } } }) });
+                          setLastModified(now); setSyncStatus('✅ Archiviert & gespeichert!');
                           alert('✅ Protokoll archiviert und gespeichert!');
                         } catch (err) {
-                          console.error('Fehler beim Speichern:', err);
-                          alert('❌ Archiviert, aber Speichern fehlgeschlagen!\n\nBitte "🔄 Aktualisieren" klicken!');
+                          alert('❌ Speichern fehlgeschlagen!\n\nBitte "🔄 Aktualisieren" klicken!');
                           setSyncStatus('❌ Speicherfehler');
                         }
                       }, 500);
                     },
-                    className: 'bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700'
+                    className: 'cbtn cbtn-orange'
                   }, '📦 Archivieren'),
-                  e('button', {
-                    onClick: () => window.print(),
-                    className: 'bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700'
-                  }, '🖨️ Drucken')
+                  e('button', { onClick: () => window.print(), className: 'cbtn cbtn-gray' }, '🖨️ Drucken')
                 )
               ),
 
               // Sections
-              e('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6' },
-                e(Section, { title: 'Ärzte:', category: 'doctors' }),
-                e(Section, { title: 'Sozialberatung:', category: 'socialCounseling' }),
-                e(Section, { title: 'Betriebliche Gesundheitsförderung:', category: 'healthPromotion' }),
-                e(Section, { title: 'WD-Organisation:', category: 'wdOrganization' })
+              e('div', { style:{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(420px,1fr))',gap:'20px',marginBottom:'20px'} },
+                e(Section, { title: '🩺 Ärzte', category: 'doctors' }),
+                e(Section, { title: '🤝 Sozialberatung', category: 'socialCounseling' }),
+                e(Section, { title: '💚 Betriebliche Gesundheitsförderung', category: 'healthPromotion' }),
+                e(Section, { title: '🏢 WD-Organisation', category: 'wdOrganization' })
               ),
-              e(Section, { title: 'Notfall-/Rettungssanitäter:', category: 'emergency' }),
-              e(Section, { title: 'Betriebsrat:', category: 'worksCouncil' }),
+              e('div', { style:{marginBottom:'20px'} },
+                e(Section, { title: '🚑 Notfall-/Rettungssanitäter', category: 'emergency' })
+              ),
+              e('div', { style:{marginBottom:'28px'} },
+                e(Section, { title: '⚖️ Betriebsrat', category: 'worksCouncil' })
+              ),
 
               // Ablauf
-              e('div', { className: 'mt-8 border-t pt-6' },
-                e('div', { className: 'flex justify-between items-center mb-4' },
-                  e('h2', { className: 'text-xl font-bold' }, 'Ablauf:'),
+              e('div', { style:{borderTop:'2px solid #e2e8f0',paddingTop:'28px',marginBottom:'28px'} },
+                e('div', { style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px'} },
+                  e('h2', { style:{fontSize:'20px',fontWeight:'800',color:'#1e293b'} }, '📋 Ablauf'),
                   admin && e('button', {
                     onClick: () => setAgenda([...agenda, '']),
-                    className: 'bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700'
+                    className: 'cbtn cbtn-green cbtn-sm'
                   }, '+ Punkt')
                 ),
-                e('ol', { className: 'list-decimal list-inside space-y-2 mb-6' },
+                e('div', null,
                   agenda.map((item, idx) =>
-                    e('li', { key: idx, className: 'flex gap-2' },
+                    e('div', { key: idx, className: 'agenda-item' },
+                      e('div', { className: 'agenda-num' }, idx + 1),
                       e('input', {
                         type: 'text', value: item,
                         onChange: (ev) => {
                           if(!admin) { alert('Nur Admins!'); return; }
                           const upd = [...agenda]; upd[idx] = ev.target.value; setAgenda(upd);
                         },
-                        className: 'flex-1 border rounded px-2 py-1',
+                        style:{flex:1,background:'transparent',border:'none',outline:'none',fontSize:'14px',color:'#374151'},
                         readOnly: !admin
                       }),
                       admin && e('button', {
                         onClick: () => setAgenda(agenda.filter((_,i) => i !== idx)),
-                        className: 'text-red-600 hover:bg-red-50 p-1 rounded'
+                        style:{background:'none',border:'none',cursor:'pointer',color:'#ef4444',fontSize:'16px',padding:'2px 6px',borderRadius:'4px'}
                       }, '🗑️')
                     )
                   )
-                ),
+                )
+              ),
 
-                // Berichte
-                e('div', { className: 'flex justify-between items-center mb-4 mt-8' },
-                  e('h2', { className: 'text-xl font-bold' }, 'Berichte:'),
+              // Berichte
+              e('div', { style:{borderTop:'2px solid #e2e8f0',paddingTop:'28px'} },
+                e('div', { style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'20px'} },
+                  e('h2', { style:{fontSize:'20px',fontWeight:'800',color:'#1e293b'} }, '📝 Berichte'),
                   canEdit() && e('button', {
                     onClick: () => setReports([...reports, { name: user, content: '', savedBy: user, savedAt: new Date().toLocaleString('de-DE') }]),
-                    className: 'bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700'
+                    className: 'cbtn cbtn-green'
                   }, '+ Bericht hinzufügen')
                 ),
+                reports.length === 0 && e('div', { style:{textAlign:'center',padding:'40px 0',color:'#94a3b8'} },
+                  e('div', { style:{fontSize:'40px',marginBottom:'8px'} }, '📄'),
+                  e('p', { style:{fontStyle:'italic'} }, 'Noch keine Berichte vorhanden.')
+                ),
                 reports.map((report, idx) =>
-                  e('div', { key: idx, className: 'mb-6 border-2 rounded-lg p-5 bg-white shadow-lg' },
-                    e('div', { className: 'flex items-center justify-between mb-4 pb-3 border-b-2 border-gray-200' },
-                      e('div', { className: 'flex items-center gap-3 flex-1' },
-                        e('span', { className: 'font-bold text-lg text-gray-800' }, 'Bericht von:'),
-                        canEdit() ?
-                          e('input', {
-                            type: 'text', value: report.name,
-                            onChange: (ev) => { const upd = [...reports]; upd[idx].name = ev.target.value; setReports(upd); },
-                            className: 'font-bold text-lg text-gray-800 border-b-2 border-transparent hover:border-blue-400 focus:border-blue-600 focus:outline-none px-2 py-1 bg-transparent',
-                            placeholder: 'Name eingeben'
-                          }) :
-                          e('span', { className: 'font-bold text-lg text-gray-800' }, report.name)
-                      ),
-                      e('div', { className: 'flex gap-2' },
-                        canEdit() && e('button', {
-                          onClick: () => {
-                            const isEditing = document.getElementById('report-edit-'+idx);
-                            if(isEditing) {
-                              isEditing.remove();
-                              const counter = document.getElementById('char-counter-'+idx);
-                              if(counter) counter.remove();
-                            } else {
-                              const MAX_CHARS = 2000; // Limit: 2000 Zeichen pro Bericht
-                              
-                              // Character Counter
-                              const counter = document.createElement('div');
-                              counter.id = 'char-counter-'+idx;
-                              counter.className = 'text-sm font-semibold mb-2 text-right';
-                              const remaining = MAX_CHARS - report.content.length;
-                              const percentage = (report.content.length / MAX_CHARS) * 100;
-                              counter.style.color = percentage > 90 ? '#dc2626' : percentage > 75 ? '#f59e0b' : '#059669';
-                              counter.textContent = remaining + ' Zeichen übrig (max ' + MAX_CHARS + ')';
-                              
-                              // Textarea
-                              const ta = document.createElement('textarea');
-                              ta.id = 'report-edit-'+idx;
-                              ta.value = report.content;
-                              ta.className = 'w-full border-2 border-blue-400 rounded-lg px-4 py-3 mb-3 text-base leading-relaxed focus:border-blue-600 focus:outline-none bg-white shadow-sm';
-                              ta.rows = 8;
-                              ta.maxLength = MAX_CHARS; // Hard limit
-                              
-                              ta.oninput = (ev) => {
-                                const upd = [...reports];
-                                upd[idx].content = ev.target.value;
-                                setReports(upd);
-                                
-                                // Update counter
-                                const rem = MAX_CHARS - ev.target.value.length;
-                                const pct = (ev.target.value.length / MAX_CHARS) * 100;
-                                counter.textContent = rem + ' Zeichen übrig (max ' + MAX_CHARS + ')';
-                                counter.style.color = pct > 90 ? '#dc2626' : pct > 75 ? '#f59e0b' : '#059669';
-                              };
-                              
-                              const container = document.getElementById('report-content-'+idx);
-                              container.prepend(ta);
-                              container.prepend(counter);
-                              ta.focus();
-                            }
-                          },
-                          className: 'text-purple-600 hover:bg-purple-50 px-3 py-2 rounded-lg text-sm border-2 border-purple-300 font-semibold'
-                        }, '✏️ Bearbeiten'),
-                        canEdit() && e('button', {
-                          onClick: () => { setLinkReportIndex(idx); setShowLinkDialog(true); },
-                          className: 'text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg text-sm border-2 border-blue-300 font-semibold'
-                        }, '🔗 Link'),
-                        canEdit() && e('button', {
-                          onClick: () => { if(confirm('Bericht löschen?')) setReports(reports.filter((_,i) => i !== idx)); },
-                          className: 'text-red-600 hover:bg-red-100 px-3 py-2 rounded-lg text-sm border-2 border-red-300 font-semibold'
-                        }, '🗑️')
+                  e('div', { key: idx, className: 'report-card' },
+                    e('div', { className: 'report-header' },
+                      e('div', { style:{display:'flex',alignItems:'center',justifyContent:'space-between',gap:'12px',flexWrap:'wrap'} },
+                        e('div', { style:{display:'flex',alignItems:'center',gap:'10px',flex:1} },
+                          e('span', { style:{fontWeight:'700',fontSize:'14px',color:'#475569',whiteSpace:'nowrap'} }, 'Bericht von:'),
+                          canEdit() ?
+                            e('input', {
+                              type: 'text', value: report.name,
+                              onChange: (ev) => { const upd = [...reports]; upd[idx].name = ev.target.value; setReports(upd); },
+                              style:{fontWeight:'700',fontSize:'16px',color:'#1e293b',border:'none',borderBottom:'2px solid transparent',outline:'none',background:'transparent',padding:'2px 6px',flex:1},
+                              placeholder: 'Name eingeben'
+                            }) :
+                            e('span', { style:{fontWeight:'700',fontSize:'16px',color:'#1e293b'} }, report.name)
+                        ),
+                        e('div', { style:{display:'flex',gap:'8px',flexShrink:0} },
+                          canEdit() && e('button', {
+                            onClick: () => {
+                              const isEditing = document.getElementById('report-edit-'+idx);
+                              if(isEditing) {
+                                isEditing.remove();
+                                const counter = document.getElementById('char-counter-'+idx);
+                                if(counter) counter.remove();
+                              } else {
+                                const MAX_CHARS = 2000;
+                                const counter = document.createElement('div');
+                                counter.id = 'char-counter-'+idx;
+                                counter.style.cssText = 'font-size:13px;font-weight:600;margin-bottom:8px;text-align:right;';
+                                const remaining = MAX_CHARS - report.content.length;
+                                const percentage = (report.content.length / MAX_CHARS) * 100;
+                                counter.style.color = percentage > 90 ? '#dc2626' : percentage > 75 ? '#f59e0b' : '#059669';
+                                counter.textContent = remaining + ' Zeichen übrig (max ' + MAX_CHARS + ')';
+                                const ta = document.createElement('textarea');
+                                ta.id = 'report-edit-'+idx;
+                                ta.value = report.content;
+                                ta.style.cssText = 'width:100%;border:2px solid #3b82f6;border-radius:10px;padding:12px 16px;margin-bottom:10px;font-size:15px;line-height:1.6;outline:none;resize:vertical;font-family:inherit;';
+                                ta.rows = 8;
+                                ta.maxLength = MAX_CHARS;
+                                ta.oninput = (ev) => {
+                                  const upd = [...reports];
+                                  upd[idx].content = ev.target.value;
+                                  setReports(upd);
+                                  const rem = MAX_CHARS - ev.target.value.length;
+                                  const pct = (ev.target.value.length / MAX_CHARS) * 100;
+                                  counter.textContent = rem + ' Zeichen übrig (max ' + MAX_CHARS + ')';
+                                  counter.style.color = pct > 90 ? '#dc2626' : pct > 75 ? '#f59e0b' : '#059669';
+                                };
+                                const container = document.getElementById('report-content-'+idx);
+                                container.prepend(ta);
+                                container.prepend(counter);
+                                ta.focus();
+                              }
+                            },
+                            className: 'cbtn cbtn-purple cbtn-sm'
+                          }, '✏️ Bearbeiten'),
+                          canEdit() && e('button', {
+                            onClick: () => { setLinkReportIndex(idx); setShowLinkDialog(true); },
+                            className: 'cbtn cbtn-blue cbtn-sm'
+                          }, '🔗 Link'),
+                          canEdit() && e('button', {
+                            onClick: () => { if(confirm('Bericht löschen?')) setReports(reports.filter((_,i) => i !== idx)); },
+                            className: 'cbtn cbtn-red cbtn-sm'
+                          }, '🗑️')
+                        )
                       )
                     ),
-                    e('div', { id: 'report-content-'+idx, className: 'bg-blue-50 p-5 rounded-lg border-2 border-blue-300' },
-                      e('div', { className: 'text-base leading-relaxed text-gray-800 whitespace-pre-wrap' },
-                        renderLinks(report.content) || e('span', { className: 'text-gray-400 italic' }, 'Bericht ist leer...')
+                    e('div', { id: 'report-content-'+idx, className: 'report-body' },
+                      e('div', { style:{fontSize:'15px',lineHeight:'1.7',color:'#334155',whiteSpace:'pre-wrap'} },
+                        renderLinks(report.content) || e('span', { style:{color:'#94a3b8',fontStyle:'italic'} }, 'Bericht ist leer — klicke auf ✏️ zum Bearbeiten...')
                       )
                     )
                   )
@@ -1607,22 +1550,23 @@
               ),
 
               // Hinweis für Dateien
-              e('div', { className: 'mt-8 border-t pt-6' },
-                e('div', { className: 'p-4 bg-blue-50 border border-blue-300 rounded-lg' },
-                  e('h3', { className: 'text-lg font-bold text-blue-900 mb-2' }, '📎 Dateien anhängen'),
-                  e('p', { className: 'text-sm text-blue-800 mb-3' }, 
+              e('div', { style:{marginTop:'32px',borderTop:'2px solid #e2e8f0',paddingTop:'24px'} },
+                e('div', { className: 'info-box' },
+                  e('h3', { style:{fontSize:'16px',fontWeight:'700',color:'#1e3a5f',marginBottom:'8px'} }, '📎 Dateien anhängen'),
+                  e('p', { style:{fontSize:'13px',color:'#334155',marginBottom:'12px'} },
                     'Lade Dateien in Teams hoch und füge den Link in deinem Bericht ein.'
                   ),
-                  e('div', { className: 'bg-white p-3 rounded border border-blue-200' },
-                    e('p', { className: 'text-xs text-gray-700 font-semibold mb-1' }, 'So geht\'s:'),
-                    e('ol', { className: 'text-xs text-gray-600 ml-4 space-y-1' },
-                      e('li', {}, '1. Datei in Teams hochladen (z.B. im Reko-Channel)'),
-                      e('li', {}, '2. Link zur Datei kopieren (Rechtsklick → Link kopieren)'),
-                      e('li', {}, '3. Link in deinem Bericht einfügen')
+                  e('div', { style:{background:'rgba(255,255,255,.7)',padding:'10px 14px',borderRadius:'8px',border:'1px solid #bfdbfe'} },
+                    e('p', { style:{fontSize:'12px',fontWeight:'700',color:'#475569',marginBottom:'4px'} }, 'So geht\'s:'),
+                    e('div', { style:{fontSize:'12px',color:'#64748b',paddingLeft:'8px'} },
+                      e('div', { style:{marginBottom:'2px'} }, '1. Datei in Teams hochladen (z.B. im Reko-Channel)'),
+                      e('div', { style:{marginBottom:'2px'} }, '2. Link zur Datei kopieren (Rechtsklick → Link kopieren)'),
+                      e('div', null, '3. In deinem Bericht über 🔗 Link einfügen')
                     )
                   )
                 )
               )
+              ) // end padding div
             )
           );
         }
